@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch dạy</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="schedule-page">
+          <div class="row g-0">
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm">
+                <header class="table-header">
+                  <div>
+                    <h3>Lịch dạy</h3>
+                  </div>
+
+                  <div class="table-tools">
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-calendar"></i>
+                      <select id="teachingSchoolYearFilter" class="form-select"></select>
+                    </div>
+
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-book-open"></i>
+                      <select id="teachingSemesterFilter" class="form-select"></select>
+                    </div>
+
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-table-cells-large"></i>
+                      <select id="teachingWeekFilter" class="form-select"></select>
+                    </div>
+                  </div>
+                </header>
+
+                <div class="teaching-timetable-wrapper table-responsive">
+                  <table class="teaching-timetable table align-middle">
+                    <thead>
+                      <tr>
+                        <th class="day-col">Thứ</th>
+                        <th>Sáng</th>
+                        <th>Chiều</th>
+                      </tr>
+                    </thead>
+                    <tbody id="teachingTimetableBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+const TEACHING_WEEK_OPTIONS = [
+  "31/03/2026-06/04/2026",
+  "07/04/2026-13/04/2026",
+  "14/04/2026-20/04/2026",
+  "21/04/2026-27/04/2026",
+  "28/04/2026-04/05/2026",
+  "05/05/2026-11/05/2026",
+  "12/05/2026-18/05/2026",
+  "19/05/2026-25/05/2026",
+  "26/05/2026-01/06/2026"
+];
+
+const TEACHING_SLOT_TEMPLATES = [
+  [
+    { day: "Thứ 2", session: "Chiều", period: "7 -> 10", room: "A204" },
+    { day: "Thứ 4", session: "Sáng", period: "1 -> 5", room: "B303" }
+  ],
+  [
+    { day: "Thứ 3", session: "Chiều", period: "7 -> 10", room: "B3-101" },
+    { day: "Thứ 5", session: "Sáng", period: "1 -> 4", room: "A109" }
+  ],
+  [
+    { day: "Thứ 6", session: "Sáng", period: "1 -> 4", room: "C202" },
+    { day: "Thứ 7", session: "Chiều", period: "7 -> 9", room: "C105" }
+  ]
+];
+
+const TEACHING_COURSE_TEMPLATES = [
+  { subject: "Thiết kế Web", code: "WEB24TMDT", className: "241261A, 241261B" },
+  { subject: "Lập trình Python", code: "PY24CNTT", className: "241421A, 241421B" }
+];
+
+const TEACHING_DAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+const TEACHING_SESSIONS = ["Sáng", "Chiều"];
+
+function dienLuaChon(selectId, values, selectedValue = "") {
+  const select = document.getElementById(selectId);
+  if (!select) {
+    return;
+  }
+
+  select.innerHTML = values.map((value) => `<option value="${value}">${value}</option>`).join("");
+  select.value = values.includes(selectedValue) ? selectedValue : (values[0] || "");
+}
+
+function taoDongLichDay() {
+  const rows = [];
+
+  TEACHING_COURSE_TEMPLATES.forEach((course, courseIndex) => {
+    TEACHING_WEEK_OPTIONS.forEach((week) => {
+      const slots = TEACHING_SLOT_TEMPLATES[courseIndex % TEACHING_SLOT_TEMPLATES.length];
+      slots.forEach((slot) => {
+        rows.push({
+          schoolYear: CURRENT_SCHOOL_YEAR,
+          semester: CURRENT_SEMESTER,
+          week,
+          day: slot.day,
+          session: slot.session,
+          subject: course.subject,
+          code: course.code,
+          className: course.className,
+          period: slot.period,
+          room: slot.room
+        });
+      });
+    });
+  });
+
+  return rows;
+}
+
+function taoTheBuoiHoc(item) {
+  return `
+    <article class="lesson-card">
+      <div class="lesson-title">${item.subject}</div>
+      <div class="lesson-line"><strong>Mã học phần:</strong> ${item.code}</div>
+      <div class="lesson-line"><strong>Lớp:</strong> ${item.className}</div>
+      <div class="lesson-line"><strong>Tiết:</strong> ${item.period}</div>
+      <div class="lesson-line"><strong>Phòng:</strong> ${item.room}</div>
+    </article>
+  `;
+}
+
+function renderLichDay() {
+  const tableBody = document.getElementById("teachingTimetableBody");
+  if (!tableBody) {
+    return;
+  }
+
+  const activeUser = laynguoidungdangnhap();
+  if (!activeUser || activeUser.role !== "lecturer") {
+    tableBody.innerHTML = `<tr><td colspan="3"><div class="no-data">Không có dữ liệu để hiển thị.</div></td></tr>`;
+    return;
+  }
+
+  const schoolYear = document.getElementById("teachingSchoolYearFilter")?.value || CURRENT_SCHOOL_YEAR;
+  const semester = document.getElementById("teachingSemesterFilter")?.value || CURRENT_SEMESTER;
+  const week = document.getElementById("teachingWeekFilter")?.value || TEACHING_WEEK_OPTIONS[0];
+  const managedClassSet = new Set(
+    typeof laydanhsachlopgiangvienquanly === "function"
+      ? laydanhsachlopgiangvienquanly(activeUser)
+      : []
+  );
+
+  const records = taoDongLichDay().filter((item) => {
+    return item.schoolYear === schoolYear
+      && item.semester === semester
+      && item.week === week
+      && managedClassSet.has(String(item.code || "").trim());
+  });
+
+  if (!records.length) {
+    tableBody.innerHTML = `<tr><td colspan="3"><div class="no-data">Chưa có lịch dạy được phân công.</div></td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = TEACHING_DAYS.map((day) => {
+    const cells = TEACHING_SESSIONS.map((session) => {
+      const items = records.filter((record) => record.day === day && record.session === session);
+      return `
+        <td class="timetable-cell ${items.length ? "" : "timetable-empty"}">
+          ${items.length ? items.map(taoTheBuoiHoc).join("") : ""}
+        </td>
+      `;
+    }).join("");
+
+    return `
+      <tr>
+        <td class="timetable-day">${day}</td>
+        ${cells}
+      </tr>
+    `;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  dienLuaChon("teachingSchoolYearFilter", [CURRENT_SCHOOL_YEAR], CURRENT_SCHOOL_YEAR);
+  dienLuaChon("teachingSemesterFilter", [CURRENT_SEMESTER], CURRENT_SEMESTER);
+  dienLuaChon("teachingWeekFilter", TEACHING_WEEK_OPTIONS, TEACHING_WEEK_OPTIONS[0]);
+
+  ["teachingSchoolYearFilter", "teachingSemesterFilter", "teachingWeekFilter"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", renderLichDay);
+  });
+
+  renderLichDay();
+});
+  </script>
+</body>
+</html>

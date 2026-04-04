@@ -1,0 +1,680 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý tài khoản</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body class="page-account-management">
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="account-management-page">
+          <div class="row g-0">
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm account-request-card" id="gradeUnlockRequests">
+                <header class="table-header">
+                  <div>
+                    <h3>Yêu cầu chờ xử lý</h3>
+                  </div>
+                </header>
+                <div id="gradeUnlockRequestList" class="admin-log-preview"></div>
+              </section>
+            </div>
+
+            <div class="col-12">
+              <section class="student-form-card account-form-card hidden card border-0 shadow-sm" id="accountFormCard">
+                <h3 id="accountFormTitle">Tạo tài khoản mới</h3>
+
+                <form id="accountForm" class="student-form">
+                  <div class="form-row">
+                    <input type="text" id="accountUsername" class="form-control" placeholder="Tên đăng nhập" required>
+                    <input type="password" id="accountPassword" class="form-control" placeholder="Mật khẩu">
+                  </div>
+
+                  <div class="form-row">
+                    <input type="text" id="accountFullName" class="form-control" placeholder="Họ và tên" required>
+                    <input type="text" id="accountStaffId" class="form-control" placeholder="Mã cán bộ">
+                  </div>
+
+                  <div class="form-row">
+                    <input type="email" id="accountEmail" class="form-control" placeholder="Email" required>
+                    <input type="text" id="accountPhone" class="form-control" placeholder="Số điện thoại">
+                  </div>
+
+                  <div class="form-row">
+                    <input type="text" id="accountDepartment" class="form-control" placeholder="Khoa / đơn vị">
+                    <input type="text" id="accountDegree" class="form-control" placeholder="Học vị">
+                  </div>
+
+                  <div class="form-row">
+                    <input type="date" id="accountBirthDate" class="form-control">
+                    <input type="text" id="accountSeniority" class="form-control" placeholder="Thâm niên">
+                  </div>
+
+                  <div class="form-row">
+                    <select id="accountRole" class="form-select" required>
+                      <option value="lecturer">Giảng viên</option>
+                      <option value="admin">Quản trị viên</option>
+                    </select>
+                    <select id="accountStatus" class="form-select" required>
+                      <option value="active">Hoạt động</option>
+                      <option value="locked">Đã khóa</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <textarea id="accountAddress" class="form-control" rows="3" placeholder="Địa chỉ"></textarea>
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn" id="accountSubmitBtn">
+                      <i class="fa-solid fa-user-plus"></i>
+                      Tạo tài khoản
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelAccountFormBtn">
+                      <i class="fa-solid fa-xmark"></i>
+                      Đóng
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm">
+                <header class="table-header">
+                  <h3>Danh sách tài khoản</h3>
+
+                  <div class="table-tools">
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-user-shield"></i>
+                      <select id="accountRoleFilter" class="form-select">
+                        <option value="all">Tất cả vai trò</option>
+                        <option value="admin">Quản trị viên</option>
+                        <option value="lecturer">Giảng viên</option>
+                      </select>
+                    </div>
+
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-toggle-on"></i>
+                      <select id="accountStatusFilter" class="form-select">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Hoạt động</option>
+                        <option value="locked">Đã khóa</option>
+                      </select>
+                    </div>
+
+                    <div class="table-search">
+                      <i class="fa-solid fa-magnifying-glass"></i>
+                      <input type="text" id="accountSearch" placeholder="TÌM TÀI KHOẢN / TÊN / EMAIL...">
+                    </div>
+
+                    <button type="button" class="add-btn" id="openAccountFormBtn">
+                      <i class="fa-solid fa-user-plus"></i>
+                      Tạo tài khoản
+                    </button>
+                  </div>
+                </header>
+
+                <div class="table-responsive">
+                  <table class="student-table table table-hover align-middle">
+                    <thead>
+                      <tr>
+                        <th>Người dùng</th>
+                        <th>Vai trò</th>
+                        <th>Liên hệ</th>
+                        <th>Đơn vị</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="accountTableBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+let accountEditId = "";
+
+function layloadulieutaikhoan() {
+  return laydanhsachtaikhoan();
+}
+
+function laytrangthaiboloctaikhoan() {
+  const roleFilter = document.getElementById("accountRoleFilter");
+  const statusFilter = document.getElementById("accountStatusFilter");
+  const searchInput = document.getElementById("accountSearch");
+
+  return {
+    role: roleFilter ? roleFilter.value : "all",
+    status: statusFilter ? statusFilter.value : "all",
+    keyword: searchInput ? searchInput.value.trim().toLowerCase() : ""
+  };
+}
+
+function laydanhsachtaikhoandaboloc() {
+  const filters = laytrangthaiboloctaikhoan();
+
+  return layloadulieutaikhoan().filter((account) => {
+    const matchesRole = filters.role === "all" || account.role === filters.role;
+    const matchesStatus = filters.status === "all" || account.status === filters.status;
+    const haystack = [
+      account.username,
+      account.fullName,
+      account.email,
+      account.staffId,
+      account.department
+    ].join(" ").toLowerCase();
+
+    return matchesRole && matchesStatus && haystack.includes(filters.keyword);
+  });
+}
+
+function hienthidanhsachtaikhoan() {
+  const tableBody = document.getElementById("accountTableBody");
+  if (!tableBody) {
+    return;
+  }
+
+  const accounts = laydanhsachtaikhoandaboloc();
+  if (!accounts.length) {
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Không tìm thấy tài khoản phù hợp.</td></tr>';
+    return;
+  }
+
+   tableBody.innerHTML = accounts.map((account) => `
+    <tr>
+      <td>
+        <div class="account-user-cell">
+          <div class="account-user-name">${account.fullName}</div>
+          <div class="account-user-meta">@${account.username}${account.staffId ? ` - ${account.staffId}` : ""}</div>
+        </div>
+      </td>
+      <td>
+        <span class="table-badge ${layclassvaitro(account.role)}">${laynhanvaitro(account.role)}</span>
+      </td>
+      <td>
+        <div class="account-contact-cell">
+          <div>${account.email || "Chưa cập nhật"}</div>
+          <div class="account-user-meta">${account.phone || "Chưa có số điện thoại"}</div>
+        </div>
+      </td>
+      <td>${account.department || "Chưa cập nhật"}</td>
+      <td>
+        <span class="table-badge ${layclasstrangthai(account.status)}">${laynhantrangthai(account.status)}</span>
+      </td>
+      <td>
+        <div class="action-buttons">
+          <button type="button" class="icon-btn edit-btn" data-action="edit" data-id="${account.id}" title="Chỉnh sửa">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button type="button" class="icon-btn ${account.status === "active" ? "lock-btn" : "unlock-btn"}" data-action="toggle-status" data-id="${account.id}" title="${account.status === "active" ? "Khóa tài khoản" : "Mở khóa tài khoản"}">
+            <i class="fa-solid ${account.status === "active" ? "fa-user-lock" : "fa-lock-open"}"></i>
+          </button>
+          <button type="button" class="icon-btn delete-btn" data-action="delete" data-id="${account.id}" title="Xóa tài khoản">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+ `).join("");
+}
+
+function datlaiformtaikhoan() {
+  const form = document.getElementById("accountForm");
+  const title = document.getElementById("accountFormTitle");
+  const submitBtn = document.getElementById("accountSubmitBtn");
+  const passwordInput = document.getElementById("accountPassword");
+  if (form) {
+    form.reset();
+  }
+
+  accountEditId = "";
+
+  if (title) {
+    title.textContent = "Tạo tài khoản mới";
+  }
+
+  if (submitBtn) {
+    submitBtn.innerHTML = `
+      <i class="fa-solid fa-user-plus"></i>
+      Tạo tài khoản
+    `;
+  }
+
+  if (passwordInput) {
+    passwordInput.placeholder = "Mật khẩu";
+  }
+
+  capnhatbatbuocformtaikhoan(true);
+}
+
+function moformtaikhoan(accountId = "") {
+  const formCard = document.getElementById("accountFormCard");
+  const title = document.getElementById("accountFormTitle");
+  const submitBtn = document.getElementById("accountSubmitBtn");
+  const passwordInput = document.getElementById("accountPassword");
+
+  datlaiformtaikhoan();
+
+  if (accountId) {
+    const account = layloadulieutaikhoan().find((item) => item.id === accountId);
+    if (!account) {
+      return;
+    }
+
+    accountEditId = account.id;
+    document.getElementById("accountUsername").value = account.username;
+    document.getElementById("accountPassword").value = "";
+    document.getElementById("accountFullName").value = account.fullName;
+    document.getElementById("accountStaffId").value = account.staffId;
+    document.getElementById("accountEmail").value = account.email;
+    document.getElementById("accountPhone").value = account.phone;
+    document.getElementById("accountDepartment").value = account.department;
+    document.getElementById("accountDegree").value = account.degree;
+    document.getElementById("accountBirthDate").value = account.birthDate;
+    document.getElementById("accountSeniority").value = account.seniority;
+    document.getElementById("accountRole").value = account.role;
+    document.getElementById("accountStatus").value = account.status;
+    document.getElementById("accountAddress").value = account.address;
+
+    if (title) {
+      title.textContent = "Chỉnh sửa tài khoản";
+    }
+
+    if (submitBtn) {
+      submitBtn.innerHTML = `
+        <i class="fa-solid fa-floppy-disk"></i>
+        Cập nhật tài khoản
+      `;
+    }
+
+    if (passwordInput) {
+      passwordInput.placeholder = "Mật khẩu (để trống nếu giữ nguyên)";
+      passwordInput.minLength = 6;
+    }
+
+    capnhatbatbuocformtaikhoan(false);
+  }
+
+  if (formCard) {
+    formCard.classList.remove("hidden");
+    formCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function dongformtaikhoan() {
+  const formCard = document.getElementById("accountFormCard");
+  if (formCard) {
+    formCard.classList.add("hidden");
+  }
+
+  datlaiformtaikhoan();
+}
+
+function capnhatbatbuocformtaikhoan(isCreateMode) {
+  const requiredFieldIds = [
+    "accountUsername",
+    "accountPassword",
+    "accountFullName",
+    "accountStaffId",
+    "accountEmail",
+    "accountPhone",
+    "accountDepartment",
+    "accountDegree",
+    "accountBirthDate",
+    "accountSeniority",
+    "accountRole",
+    "accountStatus",
+    "accountAddress"
+  ];
+
+  requiredFieldIds.forEach((fieldId) => {
+    const field = document.getElementById(fieldId);
+    if (!field) {
+      return;
+    }
+
+    field.required = isCreateMode;
+  });
+
+  const passwordInput = document.getElementById("accountPassword");
+  if (passwordInput) {
+    passwordInput.minLength = 6;
+  }
+
+  const usernameInput = document.getElementById("accountUsername");
+  if (usernameInput) {
+    usernameInput.minLength = isCreateMode ? 8 : 0;
+    usernameInput.removeAttribute("pattern");
+  }
+}
+
+function khoitaothongbaoloiFormtaikhoan() {
+  const fieldMessages = {
+    accountUsername: "Vui lòng nhập tên đăng nhập.",
+    accountPassword: "Vui lòng nhập mật khẩu.",
+    accountFullName: "Vui lòng nhập họ và tên.",
+    accountStaffId: "Vui lòng nhập mã cán bộ.",
+    accountEmail: "Vui lòng nhập email.",
+    accountPhone: "Vui lòng nhập số điện thoại.",
+    accountDepartment: "Vui lòng nhập khoa / đơn vị.",
+    accountDegree: "Vui lòng nhập học vị.",
+    accountBirthDate: "Vui lòng nhập ngày sinh.",
+    accountSeniority: "Vui lòng nhập thâm niên.",
+    accountRole: "Vui lòng chọn vai trò.",
+    accountStatus: "Vui lòng chọn trạng thái.",
+    accountAddress: "Vui lòng nhập địa chỉ."
+  };
+
+  function capnhatThongBaoHopLe(field, requiredMessage) {
+    field.setCustomValidity("");
+
+    if (field.validity.valueMissing) {
+      field.setCustomValidity(requiredMessage);
+      return;
+    }
+
+    if (field.validity.tooShort && field.id === "accountUsername") {
+      field.setCustomValidity("Tên đăng nhập phải có ít nhất 8 ký tự.");
+      return;
+    }
+
+    if (field.validity.typeMismatch && field.type === "email") {
+      field.setCustomValidity("Vui lòng nhập đúng định dạng email.");
+      return;
+    }
+
+    if (field.validity.tooShort && field.id === "accountPassword") {
+      const minimumLength = Number(field.minLength) || 0;
+      field.setCustomValidity(`Mật khẩu phải có ít nhất ${minimumLength} ký tự.`);
+    }
+  }
+
+  Object.entries(fieldMessages).forEach(([fieldId, requiredMessage]) => {
+    const field = document.getElementById(fieldId);
+    if (!field || field.dataset.validationBound === "true") {
+      return;
+    }
+
+    field.dataset.validationBound = "true";
+
+    field.addEventListener("invalid", function () {
+      capnhatThongBaoHopLe(this, requiredMessage);
+    });
+
+    ["input", "change"].forEach((eventName) => {
+      field.addEventListener(eventName, function () {
+        capnhatThongBaoHopLe(this, requiredMessage);
+      });
+    });
+  });
+}
+
+function xulydoitrangthaithaikhoan(accountId) {
+  const account = layloadulieutaikhoan().find((item) => item.id === accountId);
+  if (!account) {
+    return;
+  }
+
+   const nextStatus = account.status === "active" ? "locked" : "active";
+  const confirmMessage = nextStatus === "locked"
+    ? `Bạn có chắc muốn khóa tài khoản ${account.username} không?`
+    : `Bạn có chắc muốn mở khóa tài khoản ${account.username} không?`;
+
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  const result = capnhattrangthaitaikhoan(accountId, nextStatus);
+  if (!result.ok) {
+    alert(result.message);
+    return;
+  }
+
+  hienthidanhsachtaikhoan();
+  hienhithongbao(nextStatus === "locked" ? "Đã khóa tài khoản." : "Đã mở khóa tài khoản.");
+}
+
+function xulyxoataikhoan(accountId) {
+  const account = layloadulieutaikhoan().find((item) => item.id === accountId);
+  if (!account) {
+    return;
+  }
+
+  if (!confirm(`Bạn có chắc muốn xóa tài khoản ${account.username} không?`)) {
+    return;
+  }
+
+  const result = xoataikhoan(accountId);
+  if (!result.ok) {
+    alert(result.message);
+    return;
+  }
+
+  if (accountEditId === accountId) {
+    dongformtaikhoan();
+  }
+
+  hienthidanhsachtaikhoan();
+  hienhithongbao("Đã xóa tài khoản thành công!");
+}
+
+function capnhatyeucauchoduyet() {
+  hienthiyeucauchoduyet();
+  capnhatbieututhongbaoadmin();
+}
+
+function hienthiyeucauchoduyet() {
+  const requestList = document.getElementById("gradeUnlockRequestList");
+  if (!requestList) {
+    return;
+  }
+
+  const activeAdmin = laynguoidungdangnhap();
+  const pendingGradeRequests = laydanhsachyeucaumokhoadiem().filter((item) => item.status === "pending");
+  const mergedRequests = pendingGradeRequests.map((item) => {
+    const isRead = typeof kiemtrayeucaumokhoadiemdadocboiadmin === "function"
+      ? kiemtrayeucaumokhoadiemdadocboiadmin(item, activeAdmin)
+      : Boolean(item.readAt);
+
+    return {
+      createdAt: item.createdAt,
+      markup: `
+      <article class="admin-log-item admin-request-item ${isRead ? "is-read" : "is-unread"}">
+        <div class="admin-log-item-head">
+          <strong>${item.lecturerName}</strong>
+          <span>${dinhdangthoigianhethong(item.createdAt)}</span>
+        </div>
+        <p>Yêu cầu mở khóa nhập điểm cho lớp <strong>${item.className}</strong>${item.subject ? ` - ${item.subject}` : ""}.</p>
+        <div class="admin-request-actions">
+          <button type="button" class="btn admin-request-approve-btn" data-action="approve-grade-request" data-id="${item.id}">
+            <i class="fa-solid fa-circle-check"></i> Chấp nhận
+          </button>
+          <button type="button" class="btn admin-request-reject-btn" data-action="reject-grade-request" data-id="${item.id}">
+            <i class="fa-solid fa-circle-xmark"></i> Từ chối
+          </button>
+        </div>
+      </article>
+    `
+    };
+  }).sort((firstItem, secondItem) => new Date(secondItem.createdAt) - new Date(firstItem.createdAt));
+
+  requestList.innerHTML = mergedRequests.length
+    ? mergedRequests.map((item) => item.markup).join("")
+    : '<p class="admin-empty-state">Chưa có yêu cầu nào đang chờ xử lý.</p>';
+}
+
+function danhdayeucauchoduyetdadoc() {
+  danhdayeucauadminchodoc(laynguoidungdangnhap());
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const openFormBtn = document.getElementById("openAccountFormBtn");
+  const cancelFormBtn = document.getElementById("cancelAccountFormBtn");
+  const roleFilter = document.getElementById("accountRoleFilter");
+  const statusFilter = document.getElementById("accountStatusFilter");
+  const searchInput = document.getElementById("accountSearch");
+  const tableBody = document.getElementById("accountTableBody");
+  const form = document.getElementById("accountForm");
+  const requestList = document.getElementById("gradeUnlockRequestList");
+
+  if (!tableBody || tableBody.dataset.initialized === "true") {
+    return;
+  }
+
+  tableBody.dataset.initialized = "true";
+  khoitaothongbaoloiFormtaikhoan();
+  hienthidanhsachtaikhoan();
+  danhdayeucauchoduyetdadoc();
+  capnhatyeucauchoduyet();
+
+  if (openFormBtn) {
+    openFormBtn.addEventListener("click", function () {
+      moformtaikhoan();
+    });
+  }
+
+  if (cancelFormBtn) {
+    cancelFormBtn.addEventListener("click", dongformtaikhoan);
+  }
+
+  [roleFilter, statusFilter].forEach((element) => {
+    if (element) {
+      element.addEventListener("change", hienthidanhsachtaikhoan);
+    }
+  });
+
+  if (searchInput) {
+    searchInput.addEventListener("input", hienthidanhsachtaikhoan);
+  }
+
+  tableBody.addEventListener("click", function (event) {
+    const actionButton = event.target.closest("[data-action][data-id]");
+    if (!actionButton) {
+      return;
+    }
+
+    const accountId = actionButton.dataset.id;
+    if (!accountId) {
+      return;
+    }
+
+    if (actionButton.dataset.action === "edit") {
+      moformtaikhoan(accountId);
+      return;
+    }
+
+    if (actionButton.dataset.action === "toggle-status") {
+      xulydoitrangthaithaikhoan(accountId);
+      return;
+    }
+
+    if (actionButton.dataset.action === "delete") {
+      xulyxoataikhoan(accountId);
+    }
+  });
+
+  requestList?.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-action][data-id]");
+    if (!button) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    let result = null;
+    if (button.dataset.action === "approve-grade-request") {
+      result = chapnhanyeucaumokhoadiem(button.dataset.id, laynguoidungdangnhap());
+    } else if (button.dataset.action === "reject-grade-request") {
+      result = tuchoiyeucaumokhoadiem(button.dataset.id, laynguoidungdangnhap());
+    } else {
+      return;
+    }
+
+    if (!result.ok) {
+      hienhithongbao(result.message, "error");
+      capnhatyeucauchoduyet();
+      return;
+    }
+
+    hienhithongbao(result.message);
+    capnhatyeucauchoduyet();
+  }, true);
+
+  if (form) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const payload = {
+        username: document.getElementById("accountUsername").value.trim(),
+        password: document.getElementById("accountPassword").value.trim(),
+        fullName: document.getElementById("accountFullName").value.trim(),
+        staffId: document.getElementById("accountStaffId").value.trim(),
+        email: document.getElementById("accountEmail").value.trim(),
+        phone: document.getElementById("accountPhone").value.trim(),
+        department: document.getElementById("accountDepartment").value.trim(),
+        degree: document.getElementById("accountDegree").value.trim(),
+        birthDate: document.getElementById("accountBirthDate").value,
+        seniority: document.getElementById("accountSeniority").value.trim(),
+        role: document.getElementById("accountRole").value,
+        status: document.getElementById("accountStatus").value,
+        address: document.getElementById("accountAddress").value.trim()
+      };
+
+      const result = accountEditId
+        ? capnhattaikhoan(accountEditId, payload)
+        : themtaikhoanmoi(payload);
+
+      if (!result.ok) {
+        alert(result.message);
+        return;
+      }
+
+      dongformtaikhoan();
+      hienthidanhsachtaikhoan();
+      hienhithongbao(result.message);
+    });
+  }
+
+  window.addEventListener("hashchange", function () {
+    danhdayeucauchoduyetdadoc();
+    capnhatyeucauchoduyet();
+  });
+
+  window.addEventListener("storage", function (event) {
+    if (event.key !== GRADE_UNLOCK_REQUEST_STORAGE_KEY) {
+      return;
+    }
+
+    capnhatyeucauchoduyet();
+  });
+});
+
+</script>
+</body>
+</html>

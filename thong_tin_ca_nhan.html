@@ -1,0 +1,536 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCMUTE - Thông tin cá nhân</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+    <div class="sidebar-overlay"></div>
+    <div class="layout">
+        <my-sidebar></my-sidebar>
+
+        <div class="main">
+            <my-header></my-header>
+
+            <main class="main-content container-fluid py-3">
+                <section class="profile-layout">
+                    <div class="row g-0">
+                        <div class="col-12">
+                    <article class="profile-card card border-0 shadow-sm">
+                        <div class="profile-cover"></div>
+                        <div class="avatar-upload">
+                            <img
+                                src="https://ui-avatars.com/api/?name=Nguyen+Thi+Diem+Quynh&size=150&background=cc0000&color=fff"
+                                alt="Avatar"
+                                class="profile-avatar"
+                                id="profileAvatar"
+                            >
+                            <div class="upload-overlay" id="uploadOverlay">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <input type="file" id="avatarInput" class="hidden-input" accept="image/*">
+                        </div>
+
+                        <div class="profile-info">
+                            <header class="profile-name">
+                                <div>
+                                    <h2 id="tenGV">Nguyễn Thị Diễm Quỳnh</h2>
+                                    <p class="text-muted-secondary" id="profileDepartment">Khoa Công nghệ thông tin</p>
+                                </div>
+                                <span class="badge" id="staffIdBadge">
+                                    <i class="fas fa-id-card"></i> GV2024001
+                                </span>
+                            </header>
+
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <label>Học vị</label>
+                                    <span class="value" id="hocvi">Tiến sĩ</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <label>Email</label>
+                    <span class="value" id="email">quynh.nguyen@hcmute.edu.vn</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-phone"></i>
+                                    <label>Số điện thoại</label>
+                                    <span class="value" id="sdt">0909 123 456</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <label>Ngày sinh</label>
+                                    <span class="value" id="ngaysinh">15/05/1985</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <label>Địa chỉ</label>
+                                    <span class="value" id="diachi">Quận 1, TP.HCM</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-clock"></i>
+                                    <label>Thâm niên</label>
+                                    <span class="value" id="thamnien">10 năm</span>
+                                </div>
+                            </div>
+
+                            <button class="btn" id="editInfoBtn">
+                                <i class="fas fa-edit"></i> Chỉnh sửa thông tin
+                            </button>
+                        </div>
+                    </article>
+                        </div>
+
+                        <div class="col-12">
+                    <section class="edit-form card border-0 shadow-sm hidden" id="editForm">
+                        <h3>Chỉnh sửa thông tin</h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editHocvi">Học vị</label>
+                                <input type="text" id="editHocvi" class="form-control" placeholder="Ví dụ: Tiến sĩ">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editEmail">Email</label>
+                                <input type="email" id="editEmail" class="form-control" placeholder="Nhập email">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="editSdt">Số điện thoại</label>
+                                <input type="text" id="editSdt" class="form-control" placeholder="Nhập số điện thoại">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editNgaysinh">Ngày sinh</label>
+                                <input type="date" id="editNgaysinh" class="form-control">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="editDiachi">Địa chỉ</label>
+                                <input type="text" id="editDiachi" class="form-control" placeholder="Nhập địa chỉ">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn" id="saveInfoBtn">
+                                <i class="fas fa-save"></i> Lưu thông tin
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                                <i class="fas fa-xmark"></i> Hủy
+                            </button>
+                        </div>
+                    </section>
+                        </div>
+                    </div>
+
+                    <section id="passwordModal" class="modal" role="dialog" aria-modal="true">
+                        <div class="modal-content">
+                            <h3>Đổi mật khẩu</h3>
+
+                            <div class="form-group">
+                                <label for="oldPassword">Mật khẩu hiện tại</label>
+                                <div class="password-field">
+                                    <input type="password" id="oldPassword" class="form-control" placeholder="Nhập mật khẩu hiện tại">
+                                    <button type="button" class="password-visibility-toggle" data-target="oldPassword" aria-label="Hiển thị mật khẩu hiện tại" aria-pressed="false">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="newPassword">Mật khẩu mới</label>
+                                <div class="password-field">
+                                    <input type="password" id="newPassword" class="form-control" placeholder="Nhập mật khẩu mới">
+                                    <button type="button" class="password-visibility-toggle" data-target="newPassword" aria-label="Hiển thị mật khẩu mới" aria-pressed="false">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                                <small id="newPasswordError" class="field-error hidden">Mật khẩu phải có ít nhất 6 ký tự.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirmPassword">Xác nhận mật khẩu mới</label>
+                                <div class="password-field">
+                                    <input type="password" id="confirmPassword" class="form-control" placeholder="Nhập lại mật khẩu mới">
+                                    <button type="button" class="password-visibility-toggle" data-target="confirmPassword" aria-label="Hiển thị xác nhận mật khẩu mới" aria-pressed="false">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn" id="changePasswordBtn">
+                                    <i class="fas fa-key"></i> Cập nhật mật khẩu
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="closePasswordModalBtn">
+                                    <i class="fas fa-xmark"></i> Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+
+                <my-footer></my-footer>
+            </main>
+        </div>
+    </div>
+
+    <script src="he_thong.js"></script>
+    <script>
+function dinhdangngaythongtin(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return Number.isNaN(date.getTime()) ? String(dateStr) : date.toLocaleDateString("vi-VN");
+}
+
+function capnhatthongtinnguoidungtrang(profilePatch = {}) {
+  if (!currentUser) {
+    return { ok: false, message: "Phiên đăng nhập không hợp lệ." };
+  }
+
+  return capnhattaikhoan(currentUser.id, {
+    fullName: profilePatch.fullName ?? currentUser.fullName,
+    degree: profilePatch.degree ?? currentUser.degree,
+    email: profilePatch.email ?? currentUser.email,
+    phone: profilePatch.phone ?? currentUser.phone,
+    birthDate: profilePatch.birthDate ?? currentUser.birthDate,
+    address: profilePatch.address ?? currentUser.address,
+    seniority: profilePatch.seniority ?? currentUser.seniority,
+    avatar: profilePatch.avatar === undefined ? currentUser.avatar : profilePatch.avatar,
+    department: profilePatch.department ?? currentUser.department,
+    staffId: profilePatch.staffId ?? currentUser.staffId,
+    username: profilePatch.username ?? currentUser.username,
+    role: profilePatch.role ?? currentUser.role,
+    status: profilePatch.status ?? currentUser.status
+  });
+}
+
+function doimatkhaunguoidungtrang(oldPassword, newPassword) {
+  if (!currentUser) {
+    return { ok: false, message: "Phiên đăng nhập không hợp lệ." };
+  }
+
+  if (String(oldPassword || "") !== currentUser.password) {
+    return { ok: false, message: "Mật khẩu hiện tại không đúng." };
+  }
+
+  if (String(newPassword || "").trim().length < 6) {
+    return { ok: false, message: "Mật khẩu mới phải có ít nhất 6 ký tự." };
+  }
+
+  if (String(oldPassword || "") === String(newPassword || "")) {
+    return { ok: false, message: "Mật khẩu mới không được trùng với mật khẩu cũ!" };
+  }
+
+  return capnhattaikhoan(currentUser.id, { password: String(newPassword || "").trim() });
+}
+
+function taithongtinnguoidung() {
+  const tenGV = document.getElementById("tenGV");
+  const hocvi = document.getElementById("hocvi");
+  const email = document.getElementById("email");
+  const sdt = document.getElementById("sdt");
+  const ngaysinh = document.getElementById("ngaysinh");
+  const diachi = document.getElementById("diachi");
+  const thamnien = document.getElementById("thamnien");
+  const profileAvatar = document.getElementById("profileAvatar");
+  const profileDepartment = document.getElementById("profileDepartment");
+  const staffIdBadge = document.getElementById("staffIdBadge");
+
+  if (tenGV) tenGV.textContent = userInfo.ten;
+  if (hocvi) hocvi.textContent = userInfo.hocvi;
+  if (email) email.textContent = userInfo.email;
+  if (sdt) sdt.textContent = userInfo.sdt;
+  if (ngaysinh) ngaysinh.textContent = dinhdangngaythongtin(userInfo.ngaysinh);
+  if (diachi) diachi.textContent = userInfo.diachi;
+  if (thamnien) thamnien.textContent = userInfo.thamnien;
+  if (profileDepartment) profileDepartment.textContent = userInfo.khoa || "Đang cập nhật";
+  if (staffIdBadge) staffIdBadge.innerHTML = `<i class="fas fa-id-card"></i> ${userInfo.maSo || "Chưa có mã"}`;
+  if (profileAvatar && userInfo.avatar) {
+    profileAvatar.src = userInfo.avatar;
+  }
+}
+
+function taianhdaidien(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const nextAvatar = e.target.result;
+    const updateResult = capnhatthongtinnguoidungtrang({ avatar: nextAvatar });
+    if (!updateResult.ok) {
+      alert(updateResult.message);
+      return;
+    }
+
+    const profileAvatar = document.getElementById("profileAvatar");
+    if (profileAvatar) {
+      profileAvatar.src = nextAvatar;
+    }
+
+    userInfo = taoUserInfoTuTaiKhoan(updateResult.user);
+    hienhithongbao("Đã cập nhật ảnh đại diện!");
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function battatformchinhsua() {
+  const form = document.getElementById("editForm");
+  if (!form) return;
+
+  if (form.classList.contains("hidden")) {
+    document.getElementById("editHocvi").value = userInfo.hocvi;
+    document.getElementById("editEmail").value = userInfo.email;
+    document.getElementById("editSdt").value = userInfo.sdt;
+    document.getElementById("editNgaysinh").value = userInfo.ngaysinh;
+    document.getElementById("editDiachi").value = userInfo.diachi;
+
+    form.classList.remove("hidden");
+    form.scrollIntoView({ behavior: "smooth" });
+  } else {
+    form.classList.add("hidden");
+  }
+}
+
+function luuthongtin() {
+  const hocvi = document.getElementById("editHocvi").value.trim();
+  const email = document.getElementById("editEmail").value.trim();
+  const sdt = document.getElementById("editSdt").value.trim();
+  const ngaysinh = document.getElementById("editNgaysinh").value;
+  const diachi = document.getElementById("editDiachi").value.trim();
+
+  if (!hocvi || !email) {
+    alert("Vui lòng nhập đầy đủ học vị và email.");
+    return;
+  }
+
+  const updateResult = capnhatthongtinnguoidungtrang({
+    degree: hocvi,
+    email,
+    phone: sdt,
+    birthDate: ngaysinh,
+    address: diachi
+  });
+
+  if (!updateResult.ok) {
+    alert(updateResult.message);
+    return;
+  }
+
+  userInfo = taoUserInfoTuTaiKhoan(updateResult.user);
+  taithongtinnguoidung();
+  hienhithongbao("Đã lưu thông tin thành công!");
+  battatformchinhsua();
+}
+
+function mohopthoaimatkhau() {
+  const modal = document.getElementById("passwordModal");
+  if (modal) {
+    modal.classList.add("active");
+  }
+}
+
+function donghopthoaimatkhau() {
+  const modal = document.getElementById("passwordModal");
+  if (!modal) return;
+
+  modal.classList.remove("active");
+
+  const oldPassword = document.getElementById("oldPassword");
+  const newPassword = document.getElementById("newPassword");
+  const confirmPassword = document.getElementById("confirmPassword");
+  const newPasswordError = document.getElementById("newPasswordError");
+  const toggleButtons = document.querySelectorAll(".password-visibility-toggle");
+
+  if (oldPassword) oldPassword.value = "";
+  if (newPassword) newPassword.value = "";
+  if (confirmPassword) confirmPassword.value = "";
+  if (newPasswordError) newPasswordError.classList.add("hidden");
+
+  [oldPassword, newPassword, confirmPassword].forEach(function (passwordInput) {
+    if (passwordInput) {
+      passwordInput.type = "password";
+    }
+  });
+
+  toggleButtons.forEach(function (toggleButton) {
+    toggleButton.setAttribute("aria-pressed", "false");
+
+    const icon = toggleButton.querySelector("i");
+    if (icon) {
+      icon.className = "fa-regular fa-eye";
+    }
+  });
+}
+
+function kiemtramatkhaumoi() {
+  const newPassword = document.getElementById("newPassword");
+  const newPasswordError = document.getElementById("newPasswordError");
+  if (!newPassword || !newPasswordError) return true;
+
+  const shouldShowError = newPassword.value.length > 0 && newPassword.value.length < 6;
+  newPasswordError.classList.toggle("hidden", !shouldShowError);
+
+  return !shouldShowError;
+}
+
+function gannutanhienmatkhau() {
+  const toggleButtons = document.querySelectorAll(".password-visibility-toggle");
+  if (!toggleButtons.length) return;
+
+  toggleButtons.forEach(function (toggleButton) {
+    toggleButton.addEventListener("click", function () {
+      const targetId = toggleButton.getAttribute("data-target");
+      const passwordInput = targetId ? document.getElementById(targetId) : null;
+      if (!passwordInput) return;
+
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      toggleButton.setAttribute("aria-pressed", String(isHidden));
+      toggleButton.setAttribute(
+        "aria-label",
+        isHidden ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"
+      );
+
+      const icon = toggleButton.querySelector("i");
+      if (icon) {
+        icon.className = isHidden ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
+      }
+    });
+  });
+}
+
+function doimatkhau() {
+  const oldPass = document.getElementById("oldPassword").value;
+  const newPass = document.getElementById("newPassword").value;
+  const confirmPass = document.getElementById("confirmPassword").value;
+
+  if (!oldPass || !newPass || !confirmPass) {
+    alert("Vui lòng nhập đầy đủ thông tin!");
+    return;
+  }
+
+  if (!kiemtramatkhaumoi()) {
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    alert("Mat khau moi khong khop!");
+    return;
+  }
+
+  const changeResult = doimatkhaunguoidungtrang(oldPass, newPass);
+  if (!changeResult.ok) {
+    alert(changeResult.message);
+    return;
+  }
+
+  hienhithongbao("Đổi mật khẩu thành công!");
+  donghopthoaimatkhau();
+}
+
+function themnutdoimatkhau() {
+  const btnContainer = document.querySelector(".profile-name");
+  if (!btnContainer || btnContainer.querySelector(".btn-secondary")) {
+    return;
+  }
+
+  const changePassBtn = document.createElement("button");
+  changePassBtn.className = "btn btn-secondary profile-action-btn";
+  changePassBtn.innerHTML = '<i class="fas fa-key"></i> Đổi mật khẩu';
+  changePassBtn.addEventListener("click", mohopthoaimatkhau);
+  btnContainer.appendChild(changePassBtn);
+}
+
+function gansukien() {
+  const profileAvatar = document.getElementById("profileAvatar");
+  const uploadOverlay = document.getElementById("uploadOverlay");
+  const avatarInput = document.getElementById("avatarInput");
+  const editInfoBtn = document.getElementById("editInfoBtn");
+  const saveInfoBtn = document.getElementById("saveInfoBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
+  const closePasswordModalBtn = document.getElementById("closePasswordModalBtn");
+  const changePasswordBtn = document.getElementById("changePasswordBtn");
+  const newPasswordInput = document.getElementById("newPassword");
+
+  if (profileAvatar && avatarInput) {
+    profileAvatar.addEventListener("click", function () {
+      avatarInput.click();
+    });
+  }
+
+  if (uploadOverlay && avatarInput) {
+    uploadOverlay.addEventListener("click", function () {
+      avatarInput.click();
+    });
+  }
+
+  if (avatarInput) {
+    avatarInput.addEventListener("change", taianhdaidien);
+  }
+
+  if (editInfoBtn) {
+    editInfoBtn.addEventListener("click", battatformchinhsua);
+  }
+
+  if (saveInfoBtn) {
+    saveInfoBtn.addEventListener("click", luuthongtin);
+  }
+
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener("click", battatformchinhsua);
+  }
+
+  if (closePasswordModalBtn) {
+    closePasswordModalBtn.addEventListener("click", donghopthoaimatkhau);
+  }
+
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener("click", doimatkhau);
+  }
+
+  if (newPasswordInput) {
+    newPasswordInput.addEventListener("input", kiemtramatkhaumoi);
+  }
+
+  window.addEventListener("click", function (event) {
+    const passwordModal = document.getElementById("passwordModal");
+    if (passwordModal && event.target === passwordModal) {
+      donghopthoaimatkhau();
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  if (!document.getElementById("tenGV")) {
+    return;
+  }
+
+  taithongtinnguoidung();
+  themnutdoimatkhau();
+  gansukien();
+  gannutanhienmatkhau();
+});
+
+</script>
+</body>
+</html>
+

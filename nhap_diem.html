@@ -1,0 +1,987 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhập điểm</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="classroom-page">
+          <div class="row g-0">
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm">
+            <header class="table-header">
+              <h3>Nhập điểm sinh viên</h3>
+
+              <div class="table-tools grade-toolbar">
+                <div class="schedule-filter" id="gradeFacultyFilterWrap">
+                  <i class="fa-solid fa-building-columns"></i>
+                  <select id="gradeFacultyFilter" class="form-select"></select>
+                </div>
+
+                <div class="schedule-filter" id="gradeSubjectFilterWrap">
+                  <i class="fa-solid fa-book"></i>
+                  <select id="gradeSubjectFilter" class="form-select"></select>
+                </div>
+
+                <div class="schedule-filter" id="gradeClassFilterWrap">
+                  <i class="fa-solid fa-layer-group"></i>
+                  <select id="gradeClassFilter" class="form-select"></select>
+                </div>
+
+                <div class="table-search">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="gradeSearch" placeholder="TÌM MSSV / HỌ TÊN...">
+                </div>
+
+                <button type="button" id="toggleClassLockBtn" class="grade-lock-btn" hidden>
+                  <i class="fa-solid fa-lock"></i>
+                  Khóa điểm học phần này
+                </button>
+
+                <button type="button" id="requestGradeUnlockBtn" class="grade-lock-btn grade-request-btn" hidden>
+                  <i class="fa-solid fa-paper-plane"></i>
+                  Yêu cầu nhập điểm
+                </button>
+              </div>
+            </header>
+
+            <section class="grade-chart-grid" aria-label="Biểu đồ thống kê điểm">
+              <article class="grade-chart-card">
+                <div class="grade-chart-head">
+                  <div>
+                    <p class="grade-chart-kicker">Kết quả học phần</p>
+                    <h4>Tỷ lệ rớt và qua môn</h4>
+                  </div>
+                  <span id="gradeCompletionSummary" class="grade-chart-summary">Chưa có kết quả</span>
+                </div>
+                <div class="grade-chart-canvas-wrap">
+                  <canvas id="gradeCompletionChart"></canvas>
+                </div>
+              </article>
+
+              <article class="grade-chart-card">
+                <div class="grade-chart-head">
+                  <div>
+                    <p class="grade-chart-kicker">Phân bố kết quả</p>
+                    <h4>Nhóm điểm trung bình hiện tại</h4>
+                  </div>
+                  <span id="gradeDistributionSummary" class="grade-chart-summary">Chưa có dữ liệu</span>
+                </div>
+                <div class="grade-chart-canvas-wrap">
+                  <canvas id="gradeDistributionChart"></canvas>
+                </div>
+              </article>
+            </section>
+
+            <div class="exam-table-wrap table-responsive">
+              <table class="exam-table grade-table table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>MSSV</th>
+                    <th>Họ tên</th>
+                    <th>Khoa</th>
+                    <th>Lớp</th>
+                    <th>Điểm quá trình</th>
+                    <th>Điểm cuối kỳ</th>
+                    <th>Điểm trung bình</th>
+                  </tr>
+                </thead>
+                <tbody id="gradeTableBody"></tbody>
+              </table>
+            </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+const DEFAULT_GRADE_FACULTY = "KINH_TE";
+const DEFAULT_GRADE_SUBJECT = "Thiết kế Web";
+const DEFAULT_GRADE_CLASS = "WEB24TMDT";
+let gradebook = {};
+let gradeLockState = {};
+let currentGradeUser = null;
+let isGradeAdmin = false;
+let gradeCompletionChart = null;
+let gradeDistributionChart = null;
+
+function layyeucaumokhoadiemdangchon() {
+  const classFilter = document.getElementById("gradeClassFilter");
+  const selectedClass = classFilter ? classFilter.value : "";
+  return timyeucaumokhoadiemdangcho(currentGradeUser?.id || "", selectedClass);
+}
+
+function taibangdiem() {
+  try {
+    gradebook = JSON.parse(localStorage.getItem(GRADE_STORAGE_KEY)) || {};
+  } catch (error) {
+    gradebook = {};
+  }
+}
+
+function taibangkhoadiem() {
+  try {
+    const savedState = JSON.parse(localStorage.getItem(GRADE_LOCK_STORAGE_KEY));
+    if (!savedState || typeof savedState !== "object") {
+      gradeLockState = {};
+      return;
+    }
+
+    gradeLockState = Object.entries(savedState).reduce((result, [key, value]) => {
+      const [faculty = "", className = ""] = String(key).split("__");
+      result[taokhoadiemlop(faculty, className)] = value;
+      return result;
+    }, {});
+  } catch (error) {
+    gradeLockState = {};
+  }
+}
+
+function luubangdiem() {
+  localStorage.setItem(GRADE_STORAGE_KEY, JSON.stringify(gradebook));
+}
+
+function luubangkhoadiem() {
+  localStorage.setItem(GRADE_LOCK_STORAGE_KEY, JSON.stringify(gradeLockState));
+}
+
+function taokhoadiemlop(faculty, className) {
+  const normalizedFaculty = String(faculty || "").trim();
+  const normalizedClass = chuanhoamalop(className);
+  return `${normalizedFaculty}__${normalizedClass}`;
+}
+
+function laythongtinlophocdiem(classCode = "") {
+  const normalizedClassCode = chuanhoamalop(classCode);
+  if (!normalizedClassCode) {
+    return { code: "", faculty: "", subject: "", displayName: "" };
+  }
+
+  const classItem = typeof laylophocmastertheoten === "function" ? laylophocmastertheoten(normalizedClassCode) : null;
+  const displayName = String(classItem?.displayName || laytenhienthilop(normalizedClassCode) || normalizedClassCode).trim();
+  const subject = displayName.replace(/\s*\([^()]*\)\s*$/, "").trim() || normalizedClassCode;
+
+  return {
+    code: normalizedClassCode,
+    faculty: String(classItem?.departmentCode || "").trim(),
+    subject,
+    displayName
+  };
+}
+
+function laydanhsachlophocdiemtheonguoidung() {
+  const classCodes = isGradeAdmin
+    ? laydanhsachlopmaster().map((item) => item.name)
+    : laydanhsachlopgiangvienquanly(currentGradeUser);
+
+  const classMap = new Map();
+  classCodes.forEach((classCode) => {
+    const classInfo = laythongtinlophocdiem(classCode);
+    if (!classInfo.code || classMap.has(classInfo.code)) {
+      return;
+    }
+
+    classMap.set(classInfo.code, classInfo);
+  });
+
+  return Array.from(classMap.values()).sort((a, b) => {
+    const subjectCompare = sapxeptheochuoi(a.subject, b.subject);
+    return subjectCompare !== 0 ? subjectCompare : sapxeptheochuoi(a.code, b.code);
+  });
+}
+
+function capnhatgiaodienbolocdiem() {
+  const facultyFilterWrap = document.getElementById("gradeFacultyFilterWrap");
+  if (facultyFilterWrap) {
+    facultyFilterWrap.hidden = !isGradeAdmin;
+  }
+}
+
+function laykhoadiemdangchon() {
+  const facultyFilter = document.getElementById("gradeFacultyFilter");
+  const classFilter = document.getElementById("gradeClassFilter");
+  const classInfo = laythongtinlophocdiem(classFilter ? classFilter.value : "");
+  return (facultyFilter ? facultyFilter.value : "") || classInfo.faculty || "";
+}
+
+function kiemtralopbikhoadiem(faculty, className) {
+  const key = taokhoadiemlop(faculty, className);
+  const state = gradeLockState[key];
+  if (typeof state === "boolean") {
+    return state;
+  }
+
+  return Boolean(state && state.locked !== false);
+}
+
+function coquyenchinhsuadiem(faculty, className) {
+  if (isGradeAdmin) {
+    return true;
+  }
+
+  return !kiemtralopbikhoadiem(faculty, className);
+}
+
+function taodulieuduphongtrangdiem() {
+  if (!Array.isArray(studentSeedData) || !studentSeedData.length) {
+    classroomStudents = [];
+    return;
+  }
+
+  classroomStudents = studentSeedData.map(chuanhoasinhvienlophoc);
+}
+
+function capnhattrangthainutkhoadiem() {
+  const lockBtn = document.getElementById("toggleClassLockBtn");
+  const requestBtn = document.getElementById("requestGradeUnlockBtn");
+  const classFilter = document.getElementById("gradeClassFilter");
+
+  if (!lockBtn || !requestBtn) {
+    return;
+  }
+
+  lockBtn.hidden = !isGradeAdmin;
+  const selectedFaculty = laykhoadiemdangchon();
+  const selectedClass = classFilter ? classFilter.value : "";
+  const isLocked = selectedClass ? kiemtralopbikhoadiem(selectedFaculty, selectedClass) : false;
+  const pendingRequest = !isGradeAdmin && selectedClass ? layyeucaumokhoadiemdangchon() : null;
+
+  requestBtn.hidden = isGradeAdmin || !selectedClass || !isLocked;
+  requestBtn.disabled = !selectedClass || Boolean(pendingRequest);
+  requestBtn.innerHTML = pendingRequest
+    ? '<i class="fa-solid fa-hourglass-half"></i>Đã gửi yêu cầu'
+    : '<i class="fa-solid fa-paper-plane"></i>Yêu cầu nhập điểm';
+
+  if (!isGradeAdmin) {
+    return;
+  }
+
+  lockBtn.disabled = !selectedClass;
+  lockBtn.classList.toggle("is-locked", isLocked);
+  lockBtn.innerHTML = isLocked
+    ? '<i class="fa-solid fa-lock-open"></i>Mở khóa điểm học phần này'
+    : '<i class="fa-solid fa-lock"></i>Khóa điểm học phần này';
+}
+
+function guiyeucaunhapdiemlopdangchon() {
+  if (isGradeAdmin) {
+    return;
+  }
+
+  const classFilter = document.getElementById("gradeClassFilter");
+  const selectedClass = classFilter ? classFilter.value : "";
+  const selectedFaculty = laykhoadiemdangchon();
+  const classInfo = laythongtinlophocdiem(selectedClass);
+
+  if (!selectedClass) {
+    hienhithongbao("Vui lòng chọn học phần cần yêu cầu mở khóa điểm.", "error");
+    return;
+  }
+
+  if (!kiemtralopbikhoadiem(selectedFaculty, selectedClass)) {
+    hienhithongbao(`Lớp ${selectedClass} hiện không bị khóa điểm.`, "error");
+    capnhattrangthainutkhoadiem();
+    return;
+  }
+
+  const result = guiyeucaumokhoadiem({
+    lecturerId: currentGradeUser?.id || "",
+    lecturerName: currentGradeUser?.fullName || "",
+    faculty: selectedFaculty,
+    className: selectedClass,
+    classDisplayName: classInfo.displayName || selectedClass,
+    subject: classInfo.subject || ""
+  });
+
+  if (!result.ok) {
+    hienhithongbao(result.message, "error");
+    capnhattrangthainutkhoadiem();
+    return;
+  }
+
+  hienhithongbao(result.message);
+  capnhattrangthainutkhoadiem();
+}
+
+function phantichdiem(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (normalized === "") {
+    return null;
+  }
+
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function tinhdiemtrungbinh(processScore, finalScore) {
+  if (String(processScore).trim() === "" || String(finalScore).trim() === "") {
+    return "";
+  }
+
+  const process = phantichdiem(processScore);
+  const finalExam = phantichdiem(finalScore);
+
+  if (!Number.isFinite(process) || !Number.isFinite(finalExam)) {
+    return "";
+  }
+
+  return ((process * 0.5) + (finalExam * 0.5)).toFixed(1);
+}
+
+function dienmondiemtheokhoa(selectedFaculty = "", preferredSubject = "") {
+  const subjectFilter = document.getElementById("gradeSubjectFilter");
+  if (!subjectFilter) {
+    return "";
+  }
+
+  const availableClasses = laydanhsachlophocdiemtheonguoidung()
+    .filter((item) => !isGradeAdmin || !selectedFaculty || item.faculty === selectedFaculty);
+  const subjectNames = laygiatriduynhatdasapxep(
+    availableClasses.map((item) => item.subject).filter(Boolean),
+    true
+  );
+  const nextValue = subjectNames.includes(preferredSubject) ? preferredSubject : (subjectNames[0] || "");
+
+  subjectFilter.innerHTML = "";
+  subjectNames.forEach((subjectName) => {
+    const option = document.createElement("option");
+    option.value = subjectName;
+    option.textContent = subjectName;
+    if (subjectName === nextValue) {
+      option.selected = true;
+    }
+    subjectFilter.appendChild(option);
+  });
+
+  subjectFilter.disabled = subjectNames.length === 0;
+  return nextValue;
+}
+
+function dienlopdiemtheobomon(selectedFaculty = "", selectedSubject = "", preferredClass = "") {
+  const classFilter = document.getElementById("gradeClassFilter");
+  const facultyFilter = document.getElementById("gradeFacultyFilter");
+  if (!classFilter) {
+    return;
+  }
+
+  const classList = laydanhsachlophocdiemtheonguoidung().filter((item) => {
+    const matchesFaculty = !isGradeAdmin || !selectedFaculty || item.faculty === selectedFaculty;
+    const matchesSubject = !selectedSubject || item.subject === selectedSubject;
+    return matchesFaculty && matchesSubject;
+  });
+  const classCodes = classList.map((item) => item.code);
+  const nextValue = classCodes.includes(preferredClass) ? preferredClass : (classCodes[0] || "");
+
+  classFilter.innerHTML = "";
+  classCodes.forEach((className) => {
+    const option = document.createElement("option");
+    option.value = className;
+    option.textContent = className;
+    if (className === nextValue) {
+      option.selected = true;
+    }
+    classFilter.appendChild(option);
+  });
+
+  classFilter.disabled = classCodes.length === 0;
+
+  if (facultyFilter && nextValue) {
+    facultyFilter.value = laythongtinlophocdiem(nextValue).faculty || selectedFaculty || facultyFilter.value;
+  }
+}
+
+function dongbbolocdiem(preferredValues = {}) {
+  const facultyFilter = document.getElementById("gradeFacultyFilter");
+  const availableClasses = laydanhsachlophocdiemtheonguoidung();
+
+  if (facultyFilter) {
+    if (isGradeAdmin) {
+      const faculties = laygiatriduynhatdasapxep(
+        availableClasses.map((item) => item.faculty).filter(Boolean),
+        true
+      );
+      const preferredFaculty = faculties.includes(preferredValues.faculty)
+        ? preferredValues.faculty
+        : (faculties.includes(DEFAULT_GRADE_FACULTY) ? DEFAULT_GRADE_FACULTY : (faculties[0] || ""));
+
+      facultyFilter.innerHTML = "";
+      faculties.forEach((faculty) => {
+        const option = document.createElement("option");
+        option.value = faculty;
+        option.textContent = laykhoatheocode(faculty)?.name || faculty;
+        if (faculty === preferredFaculty) {
+          option.selected = true;
+        }
+        facultyFilter.appendChild(option);
+      });
+      facultyFilter.disabled = faculties.length === 0;
+    } else {
+      const fallbackFaculty = availableClasses[0]?.faculty || "";
+      facultyFilter.innerHTML = fallbackFaculty ? `<option value="${fallbackFaculty}">${laykhoatheocode(fallbackFaculty)?.name || fallbackFaculty}</option>` : "";
+      facultyFilter.value = preferredValues.faculty || fallbackFaculty;
+      facultyFilter.disabled = true;
+    }
+  }
+
+  const selectedFaculty = isGradeAdmin ? (facultyFilter ? facultyFilter.value : "") : "";
+  const selectedSubject = dienmondiemtheokhoa(
+    selectedFaculty,
+    preferredValues.subject || (selectedFaculty === DEFAULT_GRADE_FACULTY ? DEFAULT_GRADE_SUBJECT : "")
+  );
+  dienlopdiemtheobomon(selectedFaculty, selectedSubject, preferredValues.className || (selectedSubject === DEFAULT_GRADE_SUBJECT ? DEFAULT_GRADE_CLASS : ""));
+}
+
+function khoitaobolocdiem() {
+  capnhatgiaodienbolocdiem();
+  dongbbolocdiem({
+    faculty: DEFAULT_GRADE_FACULTY,
+    subject: DEFAULT_GRADE_SUBJECT,
+    className: DEFAULT_GRADE_CLASS
+  });
+}
+
+function laysinhviendiemtheoboloc(options = {}) {
+  const subjectFilter = document.getElementById("gradeSubjectFilter");
+  const classFilter = document.getElementById("gradeClassFilter");
+  const searchInput = document.getElementById("gradeSearch");
+  const { boquaTimKiem = false } = options;
+
+  const selectedFaculty = laykhoadiemdangchon();
+  const selectedSubject = subjectFilter ? subjectFilter.value : "";
+  const selectedClass = classFilter ? classFilter.value : "";
+  const keyword = boquaTimKiem ? "" : (searchInput ? searchInput.value.trim().toLowerCase() : "");
+
+  if (!isGradeAdmin && !selectedClass) {
+    return [];
+  }
+
+  return classroomStudents.filter((student) => {
+    const matchesFaculty = !selectedFaculty || student.faculty === selectedFaculty;
+    const matchesClass = !selectedClass || student.className === selectedClass;
+    const matchesSubject = !selectedSubject || laythongtinlophocdiem(student.className).subject === selectedSubject;
+    const matchesKeyword =
+      student.mssv.toLowerCase().includes(keyword) ||
+      student.name.toLowerCase().includes(keyword);
+
+    return matchesFaculty && matchesClass && matchesSubject && matchesKeyword;
+  });
+}
+
+function taothongkebieudodiem(students) {
+  return students.reduce((result, student) => {
+    const score = gradebook[student.mssv] || {};
+    const processScore = String(score.process ?? "").trim();
+    const finalScore = String(score.final ?? "").trim();
+    const average = tinhdiemtrungbinh(processScore, finalScore);
+    const parsedFinalScore = phantichdiem(finalScore);
+
+    if (processScore !== "" && finalScore !== "") {
+      const isFailed = (average !== "" && Number(average) < 5) || (parsedFinalScore !== null && parsedFinalScore < 3);
+      if (isFailed) {
+        result.completion.failed += 1;
+      } else {
+        result.completion.passed += 1;
+      }
+    } else if (processScore !== "" || finalScore !== "") {
+      result.completion.pending += 1;
+    } else {
+      result.completion.pending += 1;
+    }
+
+    if (average !== "") {
+      const numericAverage = Number(average);
+      if (numericAverage < 5) {
+        result.distribution.underFive += 1;
+      } else if (numericAverage < 7) {
+        result.distribution.fromFiveToSeven += 1;
+      } else if (numericAverage < 8.5) {
+        result.distribution.fromSevenToEightFive += 1;
+      } else {
+        result.distribution.fromEightFive += 1;
+      }
+    }
+
+    return result;
+  }, {
+    completion: {
+      passed: 0,
+      failed: 0,
+      pending: 0
+    },
+    distribution: {
+      underFive: 0,
+      fromFiveToSeven: 0,
+      fromSevenToEightFive: 0,
+      fromEightFive: 0
+    }
+  });
+}
+
+function khoitaobieudodiem() {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const completionCanvas = document.getElementById("gradeCompletionChart");
+  const distributionCanvas = document.getElementById("gradeDistributionChart");
+
+  if (completionCanvas && !gradeCompletionChart) {
+    gradeCompletionChart = new Chart(completionCanvas, {
+      type: "doughnut",
+      data: {
+        labels: ["Rớt môn", "Qua môn"],
+        datasets: [{
+          data: [0, 0],
+          backgroundColor: ["#f04438", "#36b37e"],
+          borderColor: "#ffffff",
+          borderWidth: 3,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              usePointStyle: true,
+              boxWidth: 10,
+              padding: 18,
+              color: "#475467",
+              font: {
+                family: "Inter",
+                size: 12,
+                weight: "600"
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return `${context.label}: ${context.parsed} sinh viên`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  if (distributionCanvas && !gradeDistributionChart) {
+    gradeDistributionChart = new Chart(distributionCanvas, {
+      type: "bar",
+      data: {
+        labels: ["< 5.0", "5.0 - 6.9", "7.0 - 8.4", ">= 8.5"],
+        datasets: [{
+          label: "Số sinh viên",
+          data: [0, 0, 0, 0],
+          backgroundColor: ["#f04438", "#f79009", "#36b37e", "#1570ef"],
+          borderRadius: 12,
+          borderSkipped: false,
+          maxBarThickness: 52
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return `${context.parsed.y} sinh viên`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: "#667085",
+              font: {
+                family: "Inter",
+                size: 12,
+                weight: "600"
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              stepSize: 1,
+              color: "#667085",
+              font: {
+                family: "Inter",
+                size: 12
+              }
+            },
+            grid: {
+              color: "rgba(15, 23, 42, 0.08)"
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+function capnhatbieudodiem(students = laysinhviendiemtheoboloc()) {
+  khoitaobieudodiem();
+
+  const completionSummary = document.getElementById("gradeCompletionSummary");
+  const distributionSummary = document.getElementById("gradeDistributionSummary");
+  const stats = taothongkebieudodiem(students);
+  const completedCount = stats.completion.passed + stats.completion.failed;
+  const gradedCount = Object.values(stats.distribution).reduce((sum, value) => sum + value, 0);
+  const totalStudents = students.length;
+
+  if (completionSummary) {
+    completionSummary.textContent = completedCount
+            ? `${stats.completion.failed} rớt - ${stats.completion.passed} qua`
+      : "Chưa có kết quả";
+  }
+
+  if (distributionSummary) {
+    distributionSummary.textContent = gradedCount
+      ? `${gradedCount}/${totalStudents} sinh viên đã có điểm trung bình`
+      : "Chưa có dữ liệu điểm trung bình";
+  }
+
+  if (gradeCompletionChart) {
+    gradeCompletionChart.data.datasets[0].data = [
+      stats.completion.failed,
+      stats.completion.passed
+    ];
+    gradeCompletionChart.options.plugins.tooltip.callbacks.label = function (context) {
+      const value = context.parsed;
+      const percent = completedCount ? ((value / completedCount) * 100).toFixed(1) : "0.0";
+      return `${context.label}: ${value} sinh viên (${percent}%)`;
+    };
+    gradeCompletionChart.update();
+  }
+
+  if (gradeDistributionChart) {
+    gradeDistributionChart.data.datasets[0].data = [
+      stats.distribution.underFive,
+      stats.distribution.fromFiveToSeven,
+      stats.distribution.fromSevenToEightFive,
+      stats.distribution.fromEightFive
+    ];
+    gradeDistributionChart.update();
+  }
+}
+
+function hienthibangdiem() {
+  const tableBody = document.getElementById("gradeTableBody");
+
+  if (!tableBody) return;
+
+  capnhattrangthainutkhoadiem();
+
+  const filtered = laysinhviendiemtheoboloc();
+  capnhatbieudodiem(filtered);
+
+  if (!filtered.length) {
+    tableBody.innerHTML = '<tr><td colspan="8" class="exam-empty">Không tìm thấy sinh viên phù hợp.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map((student, index) => {
+    const score = gradebook[student.mssv] || {};
+    const processScore = score.process ?? "";
+    const finalScore = score.final ?? "";
+    const average = tinhdiemtrungbinh(processScore, finalScore);
+    const parsedFinalScore = phantichdiem(finalScore);
+    const isRisk = (average !== "" && Number(average) < 5) || (parsedFinalScore !== null && parsedFinalScore < 3);
+    const inputDisabled = coquyenchinhsuadiem(student.faculty, student.className) ? "" : "disabled";
+
+    return `
+      <tr class="grade-row ${isRisk ? "is-risk" : ""}">
+        <td>${index + 1}</td>
+        <td>${student.mssv}</td>
+        <td>${student.name}</td>
+        <td>${student.faculty}</td>
+        <td>${student.className}</td>
+        <td>
+          <input
+            type="text"
+            inputmode="decimal"
+            class="grade-input"
+            value="${processScore}"
+            data-type="process"
+            data-mssv="${student.mssv}"
+            ${inputDisabled}
+          >
+        </td>
+        <td>
+          <input
+            type="text"
+            inputmode="decimal"
+            class="grade-input"
+            value="${finalScore}"
+            data-type="final"
+            data-mssv="${student.mssv}"
+            ${inputDisabled}
+          >
+        </td>
+        <td class="grade-average">${average}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function capnhatdiemsinhvien(mssv, type, value) {
+  const student = classroomStudents.find((item) => item.mssv === mssv);
+  if (student && !coquyenchinhsuadiem(student.faculty, student.className)) {
+    hienhithongbao(`Học phần ${student.className} đã khóa điểm. Vui lòng mở khóa để chỉnh sửa.`, "error");
+    hienthibangdiem();
+    return;
+  }
+
+  if (!gradebook[mssv]) {
+    gradebook[mssv] = {};
+  }
+
+  if (value === "") {
+    gradebook[mssv][type] = "";
+  } else {
+    const parsedValue = phantichdiem(value);
+    const numeric = parsedValue === null ? NaN : Math.max(0, Math.min(10, parsedValue));
+    gradebook[mssv][type] = Number.isFinite(numeric) ? numeric : "";
+  }
+
+  luubangdiem();
+  hienthibangdiem();
+}
+
+function chuyentrangthaikhoadiemlopdangchon() {
+  if (!isGradeAdmin) {
+    return;
+  }
+
+  const classFilter = document.getElementById("gradeClassFilter");
+  const selectedFaculty = laykhoadiemdangchon();
+  const selectedClass = classFilter ? classFilter.value : "";
+
+  if (!selectedClass) {
+    return;
+  }
+
+  const key = taokhoadiemlop(selectedFaculty, selectedClass);
+  const isLocked = kiemtralopbikhoadiem(selectedFaculty, selectedClass);
+
+  if (isLocked) {
+    delete gradeLockState[key];
+  } else {
+    gradeLockState[key] = {
+      locked: true,
+      lockedAt: new Date().toISOString(),
+      lockedById: currentGradeUser?.id || "",
+      lockedByName: currentGradeUser?.fullName || "Quản trị viên"
+    };
+  }
+
+  luubangkhoadiem();
+  capnhattrangthainutkhoadiem();
+  hienthibangdiem();
+  hienhithongbao(
+    isLocked
+      ? `Đã mở khóa điểm học phần ${selectedClass}.`
+      : `Đã khóa điểm học phần ${selectedClass}.`,
+    "success"
+  );
+}
+
+function capnhatxemtruocdongdiem(row) {
+  if (!row) {
+    return;
+  }
+
+  const processInput = row.querySelector('.grade-input[data-type="process"]');
+  const finalInput = row.querySelector('.grade-input[data-type="final"]');
+  const averageCell = row.querySelector(".grade-average");
+
+  if (!processInput || !finalInput || !averageCell) {
+    return;
+  }
+
+  const average = tinhdiemtrungbinh(processInput.value, finalInput.value);
+  const finalScore = phantichdiem(finalInput.value);
+  const isRisk = (average !== "" && Number(average) < 5) || (finalScore !== null && finalScore < 3);
+
+  averageCell.textContent = average;
+  row.classList.toggle("is-risk", isRisk);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const tableBody = document.getElementById("gradeTableBody");
+  const facultyFilter = document.getElementById("gradeFacultyFilter");
+  const subjectFilter = document.getElementById("gradeSubjectFilter");
+  const classFilter = document.getElementById("gradeClassFilter");
+  const toggleClassLockBtn = document.getElementById("toggleClassLockBtn");
+  const requestGradeUnlockBtn = document.getElementById("requestGradeUnlockBtn");
+  const searchInput = document.getElementById("gradeSearch");
+
+  if (!tableBody || tableBody.dataset.initialized === "true") {
+    return;
+  }
+
+  tableBody.dataset.initialized = "true";
+  taibangdiem();
+  taibangkhoadiem();
+  currentGradeUser = laynguoidungdangnhap();
+  isGradeAdmin = currentGradeUser?.role === "admin";
+  capnhattrangthainutkhoadiem();
+
+  try {
+    taisinhvienlophoc();
+  } catch (error) {
+    taodulieuduphongtrangdiem();
+  }
+
+  if (!Array.isArray(classroomStudents) || !classroomStudents.length) {
+    taodulieuduphongtrangdiem();
+  }
+
+  khoitaobieudodiem();
+
+  try {
+    khoitaobolocdiem();
+    hienthibangdiem();
+  } catch (error) {
+    taodulieuduphongtrangdiem();
+    khoitaobolocdiem();
+    hienthibangdiem();
+    hienhithongbao("Đã tự khôi phục dữ liệu mặc định cho trang nhập điểm.", "error");
+  }
+
+  capnhattrangthainutkhoadiem();
+
+  if (facultyFilter) {
+    facultyFilter.addEventListener("change", function () {
+      const selectedSubject = dienmondiemtheokhoa(facultyFilter.value);
+      dienlopdiemtheobomon(facultyFilter.value, selectedSubject);
+      capnhattrangthainutkhoadiem();
+      hienthibangdiem();
+    });
+  }
+
+  if (subjectFilter) {
+    subjectFilter.addEventListener("change", function () {
+      const selectedFaculty = isGradeAdmin ? laykhoadiemdangchon() : "";
+      dienlopdiemtheobomon(selectedFaculty, subjectFilter.value);
+      capnhattrangthainutkhoadiem();
+      hienthibangdiem();
+    });
+  }
+
+  if (classFilter) {
+    classFilter.addEventListener("change", function () {
+      capnhattrangthainutkhoadiem();
+      hienthibangdiem();
+    });
+  }
+
+  if (toggleClassLockBtn) {
+    toggleClassLockBtn.addEventListener("click", chuyentrangthaikhoadiemlopdangchon);
+  }
+
+  if (requestGradeUnlockBtn) {
+    requestGradeUnlockBtn.addEventListener("click", guiyeucaunhapdiemlopdangchon);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", hienthibangdiem);
+  }
+
+  window.addEventListener("storage", function (event) {
+    if (event.key !== GRADE_LOCK_STORAGE_KEY && event.key !== GRADE_UNLOCK_REQUEST_STORAGE_KEY) {
+      return;
+    }
+
+    taibangkhoadiem();
+    capnhattrangthainutkhoadiem();
+    hienthibangdiem();
+  });
+
+  tableBody.addEventListener("input", function (event) {
+    const input = event.target.closest(".grade-input");
+    if (!input) return;
+
+    input.value = input.value.replace(/[^0-9.,]/g, "");
+    capnhatxemtruocdongdiem(input.closest("tr"));
+  });
+
+  tableBody.addEventListener("focusin", function (event) {
+    const input = event.target.closest(".grade-input");
+    if (!input) return;
+
+    window.requestAnimationFrame(function () {
+      input.select();
+    });
+  });
+
+  tableBody.addEventListener("click", function (event) {
+    const input = event.target.closest(".grade-input");
+    if (!input) return;
+
+    input.select();
+  });
+
+  tableBody.addEventListener("change", function (event) {
+    const input = event.target.closest(".grade-input");
+    if (!input) return;
+
+    capnhatdiemsinhvien(input.dataset.mssv, input.dataset.type, input.value);
+  });
+});
+
+window.addEventListener("load", function () {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  try {
+    khoitaobieudodiem();
+    capnhatbieudodiem();
+  } catch (error) {
+    // Keep the grade table usable even if the chart library loads late or fails.
+  }
+});
+
+</script>
+</body>
+</html>

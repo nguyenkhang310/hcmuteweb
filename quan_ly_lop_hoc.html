@@ -1,0 +1,494 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý lớp học</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body class="page-classroom-management">
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="classroom-page">
+          <div class="row g-0">
+            <div class="col-12">
+              <nav class="classroom-back" aria-label="Back">
+            <a href="du_lieu_tong.html" class="classroom-back-btn">
+              <i class="fa-solid fa-arrow-left"></i>
+              Quay lại
+            </a>
+          </nav>
+            </div>
+
+            <div class="col-12">
+              <section class="student-form-card classroom-form-card hidden card border-0 shadow-sm" id="classroomFormCard">
+            <h3>Thêm sinh viên</h3>
+
+            <form id="classroomStudentForm" class="student-form">
+              <div class="form-row">
+                <input type="text" id="classroomMssv" class="form-control" placeholder="Mã sinh viên" required>
+                <input type="text" id="classroomName" class="form-control" placeholder="Họ và tên" required>
+              </div>
+
+              <div class="form-row">
+                <select id="classroomGender" class="form-select" required>
+                  <option value="">Chọn giới tính</option>
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                </select>
+                <input type="email" id="classroomEmail" class="form-control" placeholder="Email" required>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="add-btn btn btn-primary" id="classroomSubmitBtn">
+                  <i class="fa-solid fa-user-plus"></i>
+                  Thêm sinh viên
+                </button>
+                <button type="button" class="btn btn-secondary" id="cancelClassroomFormBtn">
+                  <i class="fa-solid fa-xmark"></i>
+                  Đóng
+                </button>
+              </div>
+            </form>
+              </section>
+            </div>
+
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm">
+            <header class="table-header">
+              <h3>Danh sách sinh viên</h3>
+
+              <div class="table-tools">
+                <div class="schedule-filter">
+                  <i class="fa-solid fa-building-columns"></i>
+                  <select id="classroomFacultyFilter" class="form-select"></select>
+                </div>
+
+                <div class="schedule-filter">
+                  <i class="fa-solid fa-layer-group"></i>
+                  <select id="classroomClassFilter" class="form-select"></select>
+                </div>
+
+                <div class="table-search">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="classroomSearch" placeholder="TÌM MSSV / HỌ TÊN / EMAIL...">
+                </div>
+
+                <button type="button" class="add-btn" id="openClassroomFormBtn">
+                  <i class="fa-solid fa-user-plus"></i>
+                  Thêm sinh viên
+                </button>
+              </div>
+            </header>
+
+            <div class="classroom-table-wrap table-responsive">
+              <table class="student-table classroom-student-table table table-hover align-middle">
+                <colgroup>
+                  <col class="classroom-col-stt">
+                  <col class="classroom-col-id">
+                  <col class="classroom-col-name">
+                  <col class="classroom-col-gender">
+                  <col class="classroom-col-class">
+                  <col class="classroom-col-email">
+                  <col class="classroom-col-actions">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>MSSV</th>
+                    <th>Họ tên</th>
+                    <th>Giới tính</th>
+                    <th>Lớp</th>
+                    <th>Email</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="classroomStudentTable"></tbody>
+              </table>
+            </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+let classroomEditIndex = -1;
+
+function laytrangthaiboloclophoc() {
+  const facultyFilter = document.getElementById("classroomFacultyFilter");
+  const classFilter = document.getElementById("classroomClassFilter");
+  const searchInput = document.getElementById("classroomSearch");
+
+  return {
+    faculty: facultyFilter ? facultyFilter.value : "",
+    className: classFilter ? classFilter.value : "",
+    keyword: searchInput ? searchInput.value : ""
+  };
+}
+
+function dienbolocselect(selectOrId, options, selectedValue = "") {
+  const select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
+  if (!select) {
+    return null;
+  }
+
+  const optionValues = options.filter(Boolean);
+  const nextValue = optionValues.includes(selectedValue) ? selectedValue : (optionValues[0] || "");
+
+  select.innerHTML = "";
+  optionValues.forEach((optionValue) => {
+    const option = document.createElement("option");
+    option.value = optionValue;
+    option.textContent = optionValue;
+    option.selected = optionValue === nextValue;
+    select.appendChild(option);
+  });
+
+  select.disabled = optionValues.length === 0;
+  return select;
+}
+
+function khoitaoboloclophoc(selectedFaculty = "", selectedClass = "") {
+  const facultyFilter = document.getElementById("classroomFacultyFilter");
+  const classFilter = document.getElementById("classroomClassFilter");
+  const facultyOptions = laydanhsachkhoalophoc();
+  const nextFaculty = facultyOptions.includes(selectedFaculty) ? selectedFaculty : (facultyOptions[0] || "");
+
+  dienbolocselect(facultyFilter, facultyOptions, nextFaculty);
+  dienbolocselect(classFilter, laydanhsachloptheokhoa(nextFaculty), selectedClass);
+}
+
+function dongbotuychonlophoc(selectedFaculty = "", selectedClass = "") {
+  dienbolocselect("classroomClassFilter", laydanhsachloptheokhoa(selectedFaculty), selectedClass);
+}
+
+function layngucanhformlophoc() {
+  if (classroomEditIndex !== -1 && classroomStudents[classroomEditIndex]) {
+    return {
+      faculty: classroomStudents[classroomEditIndex].faculty,
+      className: classroomStudents[classroomEditIndex].className
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const facultyFilter = document.getElementById("classroomFacultyFilter");
+  const classFilter = document.getElementById("classroomClassFilter");
+  const selectedFaculty = facultyFilter ? facultyFilter.value.trim() : "";
+  const selectedClass = classFilter ? classFilter.value.trim() : "";
+
+  return {
+    faculty: selectedFaculty || (params.get("faculty") || "").trim(),
+    className: selectedClass || chuanhoamalop(params.get("className"))
+  };
+}
+
+function laysinhvienlophoctheoboloc(options = {}) {
+  const facultyFilter = document.getElementById("classroomFacultyFilter");
+  const classFilter = document.getElementById("classroomClassFilter");
+  const searchInput = document.getElementById("classroomSearch");
+  const { boquaTimKiem = false } = options;
+
+  const selectedFaculty = facultyFilter ? facultyFilter.value : "";
+  const selectedClass = classFilter ? classFilter.value : "";
+  const keyword = boquaTimKiem ? "" : (searchInput ? searchInput.value.trim().toLowerCase() : "");
+
+  return classroomStudents.filter((student) => {
+    const matchesFaculty = !selectedFaculty || student.faculty === selectedFaculty;
+    const matchesClass = !selectedClass || student.className === selectedClass;
+    const matchesKeyword =
+      student.mssv.toLowerCase().includes(keyword) ||
+      student.name.toLowerCase().includes(keyword) ||
+      student.email.toLowerCase().includes(keyword);
+
+    return matchesFaculty && matchesClass && matchesKeyword;
+  });
+}
+
+function hienthisinhvienlophoc() {
+  const table = document.getElementById("classroomStudentTable");
+  if (!table) return;
+
+  const filtered = laysinhvienlophoctheoboloc();
+
+  if (filtered.length === 0) {
+    table.innerHTML = '<tr class="empty-row"><td colspan="7">Không tìm thấy sinh viên phù hợp</td></tr>';
+    return;
+  }
+
+  table.innerHTML = filtered.map((student, index) => {
+    const realIndex = classroomStudents.findIndex((item) => item.mssv === student.mssv);
+
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${student.mssv}</td>
+        <td>${student.name}</td>
+        <td>${student.gender}</td>
+        <td>${student.className}</td>
+        <td>${student.email}</td>
+        <td>
+          <div class="action-buttons">
+            <button type="button" class="icon-btn edit-btn" data-action="edit" data-index="${realIndex}" title="Sửa">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button type="button" class="icon-btn delete-btn" data-action="delete" data-index="${realIndex}" title="Xóa">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function moformlophoc() {
+  const formCard = document.getElementById("classroomFormCard");
+  if (formCard) {
+    formCard.classList.remove("hidden");
+    formCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function dongformlophoc() {
+  const formCard = document.getElementById("classroomFormCard");
+  const form = document.getElementById("classroomStudentForm");
+  const submitBtn = document.getElementById("classroomSubmitBtn");
+
+  if (formCard) {
+    formCard.classList.add("hidden");
+  }
+
+  if (form) {
+    form.reset();
+  }
+
+  classroomEditIndex = -1;
+
+  if (submitBtn) {
+    submitBtn.innerHTML = `
+      <i class="fa-solid fa-user-plus"></i>
+      Thêm sinh viên
+    `;
+  }
+}
+
+function suasinhvienlophoc(index) {
+  const student = classroomStudents[index];
+  if (!student) return;
+
+  classroomEditIndex = index;
+  moformlophoc();
+
+  document.getElementById("classroomMssv").value = student.mssv;
+  document.getElementById("classroomName").value = student.name;
+  document.getElementById("classroomGender").value = student.gender;
+  document.getElementById("classroomEmail").value = student.email;
+
+  const submitBtn = document.getElementById("classroomSubmitBtn");
+  if (submitBtn) {
+    submitBtn.innerHTML = `
+      <i class="fa-solid fa-floppy-disk"></i>
+      Cập nhật sinh viên
+    `;
+  }
+}
+
+function xoasinhvienlophoc(index) {
+  if (index < 0 || index >= classroomStudents.length) {
+    return;
+  }
+
+  if (!confirm("Bạn có chắc muốn xóa sinh viên này không?")) {
+    return;
+  }
+
+  const currentFilters = laytrangthaiboloclophoc();
+
+  classroomStudents.splice(index, 1);
+  luusinhvienlophoc();
+  khoitaoboloclophoc(currentFilters.faculty, currentFilters.className);
+
+  const searchInput = document.getElementById("classroomSearch");
+  if (searchInput) {
+    searchInput.value = currentFilters.keyword;
+  }
+
+  hienthisinhvienlophoc();
+  hienhithongbao("Đã xóa thành công!");
+
+  if (classroomEditIndex === index) {
+    dongformlophoc();
+  } else if (classroomEditIndex > index) {
+    classroomEditIndex -= 1;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const table = document.getElementById("classroomStudentTable");
+  const facultyFilter = document.getElementById("classroomFacultyFilter");
+  const classFilter = document.getElementById("classroomClassFilter");
+  const searchInput = document.getElementById("classroomSearch");
+  const openFormBtn = document.getElementById("openClassroomFormBtn");
+  const cancelFormBtn = document.getElementById("cancelClassroomFormBtn");
+  const form = document.getElementById("classroomStudentForm");
+
+  if (!table || table.dataset.initialized === "true") {
+    return;
+  }
+
+  table.dataset.initialized = "true";
+  taisinhvienlophoc();
+  khoitaoboloclophoc();
+
+  const params = new URLSearchParams(window.location.search);
+  const initialFaculty = params.get("faculty");
+  const initialClass = chuanhoamalop(params.get("className"));
+
+  if (facultyFilter && initialFaculty) {
+    facultyFilter.value = initialFaculty;
+    dongbotuychonlophoc(initialFaculty, initialClass || "");
+  }
+
+  if (classFilter && initialClass) {
+    classFilter.value = initialClass;
+  }
+
+  hienthisinhvienlophoc();
+
+  if (facultyFilter) {
+    facultyFilter.addEventListener("change", function () {
+      dongbotuychonlophoc(facultyFilter.value, "");
+      hienthisinhvienlophoc();
+    });
+  }
+
+  if (classFilter) {
+    classFilter.addEventListener("change", hienthisinhvienlophoc);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", hienthisinhvienlophoc);
+  }
+
+  table.addEventListener("click", function (event) {
+    const actionButton = event.target.closest("[data-action][data-index]");
+    if (!actionButton) {
+      return;
+    }
+
+    const rowIndex = Number(actionButton.dataset.index);
+    if (!Number.isInteger(rowIndex)) {
+      return;
+    }
+
+    if (actionButton.dataset.action === "edit") {
+      suasinhvienlophoc(rowIndex);
+      return;
+    }
+
+    if (actionButton.dataset.action === "delete") {
+      xoasinhvienlophoc(rowIndex);
+    }
+  });
+
+  if (openFormBtn) {
+    openFormBtn.addEventListener("click", moformlophoc);
+  }
+
+  if (cancelFormBtn) {
+    cancelFormBtn.addEventListener("click", dongformlophoc);
+  }
+
+  if (form) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const mssv = document.getElementById("classroomMssv").value.trim();
+      const name = document.getElementById("classroomName").value.trim();
+      const gender = document.getElementById("classroomGender").value.trim();
+      const email = document.getElementById("classroomEmail").value.trim();
+      const classFilterValue = classFilter ? classFilter.value.trim() : "";
+      const isEditing = classroomEditIndex !== -1;
+      const context = layngucanhformlophoc();
+      const faculty = context.faculty;
+      const className = context.className;
+
+      if (!isEditing && !classFilterValue) {
+        alert("Vui lòng chọn một lớp cụ thể trước khi thêm sinh viên.");
+        return;
+      }
+
+      if (!mssv || !name || !gender || !faculty || !className || !email) {
+        alert("Không xác định được khoa và lớp hiện tại. Hãy chọn lớp ở bộ lọc phía trên trước khi thêm sinh viên.");
+        return;
+      }
+
+      const duplicate = classroomStudents.some((student) => student.mssv.toLowerCase() === mssv.toLowerCase());
+      if (duplicate && (classroomEditIndex === -1 || classroomStudents[classroomEditIndex].mssv.toLowerCase() !== mssv.toLowerCase())) {
+        alert("Mã sinh viên đã tồn tại.");
+        return;
+      }
+
+      const duplicateEmail = classroomStudents.some((student, index) => {
+        if (classroomEditIndex !== -1 && index === classroomEditIndex) {
+          return false;
+        }
+        return (student.email || "").toLowerCase() === email.toLowerCase();
+      });
+
+      if (duplicateEmail) {
+        alert("Email đã tồn tại.");
+        return;
+      }
+
+      const studentData = chuanhoasinhvienlophoc({
+        mssv,
+        name,
+        gender,
+        faculty,
+        className,
+        email
+      });
+
+      const currentFilters = laytrangthaiboloclophoc();
+
+      if (!isEditing) {
+        classroomStudents.unshift(studentData);
+      } else {
+        classroomStudents[classroomEditIndex] = studentData;
+      }
+
+      luusinhvienlophoc();
+      khoitaoboloclophoc(currentFilters.faculty, currentFilters.className);
+      if (searchInput) {
+        searchInput.value = currentFilters.keyword;
+      }
+      hienthisinhvienlophoc();
+      dongformlophoc();
+      hienhithongbao(isEditing ? "Đã cập nhật sinh viên thành công!" : "Đã thêm sinh viên thành công!");
+    });
+  }
+});
+
+</script>
+</body>
+</html>

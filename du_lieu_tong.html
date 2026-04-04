@@ -1,0 +1,794 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khoa & Học phần</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="page-master-data">
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+    <div class="main">
+      <my-header></my-header>
+      <main class="main-content container-fluid py-3">
+        <section class="account-management-page" id="masterDataPage">
+          <section class="student-form-card master-data-card master-data-workspace master-data-single card border-0 shadow-sm">
+            <header class="master-workspace-header">
+              <div class="master-workspace-copy">
+                <h3>Quản lý học phần</h3>
+              </div>
+            </header>
+
+            <form id="classForm" class="student-form master-class-form">
+              <div class="form-row">
+                <input type="text" id="classNameInput" class="form-control" placeholder="Mã học phần" required>
+                <input type="text" id="classDisplayNameInput" class="form-control" placeholder="Tên học phần hiển thị">
+              </div>
+              <div class="form-row">
+                <select id="classDepartmentInput" class="form-select" required></select>
+                <select id="classAdvisorInput" class="form-select" required></select>
+              </div>
+              <div class="form-row">
+                <input list="classStudentClassOptions" type="text" id="classManagedClassesInput" class="form-control" placeholder="Lớp sinh viên phụ trách, có thể nhập nhiều lớp">
+              </div>
+              <div class="form-group master-upload-group">
+                <label for="classStudentCsvInput">Danh sách sinh viên (CSV)</label>
+                <div class="master-upload-row">
+                  <input type="file" id="classStudentCsvInput" class="form-control file-upload-control" accept=".csv,text/csv">
+                </div>
+              </div>
+              <datalist id="classStudentClassOptions"></datalist>
+              <p class="master-form-hint" id="classDepartmentHint"></p>
+              <div class="form-actions">
+                <button type="submit" class="btn" id="classSubmitBtn"><i class="fa-solid fa-plus"></i>Thêm học phần</button>
+                <button type="button" class="btn btn-secondary" id="classCancelBtn">Hủy</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="student-table-card master-class-gallery-card card border-0 shadow-sm">
+            <header class="table-header">
+              <h3>Danh sách học phần</h3>
+
+              <div class="table-tools">
+                <div class="schedule-filter">
+                  <i class="fa-solid fa-building-columns"></i>
+                  <select id="masterClassDepartmentFilter" class="form-select">
+                    <option value="all">Tất cả khoa</option>
+                  </select>
+                </div>
+              </div>
+            </header>
+
+            <div id="masterClassGrid" class="class-grid-container"></div>
+          </section>
+
+          <my-footer></my-footer>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="he_thong.js"></script>
+  <script>
+let editingClassId = "";
+
+const HIDDEN_DEPARTMENT_CLASS_NAMES = new Set();
+const CLASS_CSV_HEADER_ALIASES = {
+  mssv: ["mssv", "masosinhvien", "masinhvien", "studentid", "studentcode"],
+  name: ["hovaten", "hoten", "ten", "fullname", "name"],
+  gender: ["gioitinh", "gender"],
+  email: ["email", "mail"],
+  phone: ["sodienthoai", "dienthoai", "phone", "sdt"],
+  faculty: ["khoa", "faculty"],
+  className: ["lop", "classname", "class"]
+};
+
+function capnhatnut(id, html) {
+  const button = document.getElementById(id);
+  if (button) {
+    button.innerHTML = html;
+  }
+}
+
+function optionMarkup(items, valueKey, labelBuilder) {
+  return items.map((item) => `<option value="${item[valueKey]}">${labelBuilder(item)}</option>`).join("");
+}
+
+function datlaiform(formId) {
+  const form = document.getElementById(formId);
+  if (form) {
+    form.reset();
+  }
+}
+
+function chuanhoatieudecsv(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function tachdongcsv(line = "") {
+  const cells = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const nextChar = line[index + 1];
+
+    if (char === "\"") {
+      if (inQuotes && nextChar === "\"") {
+        current += "\"";
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
+function doctepcsvlophoc(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      if (reader.result instanceof ArrayBuffer) {
+        const bytes = new Uint8Array(reader.result);
+        const encodings = ["utf-8", "windows-1258", "windows-1252"];
+
+        for (const encoding of encodings) {
+          try {
+            const text = new TextDecoder(encoding).decode(bytes);
+            if (text.trim()) {
+              resolve(text);
+              return;
+            }
+          } catch (error) {
+            // Try the next encoding.
+          }
+        }
+      }
+
+      resolve("");
+    };
+    reader.onerror = function () {
+      reject(new Error("CSV_READ_FAILED"));
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+}
+
+function timcotcsv(headers, aliases = []) {
+  return headers.findIndex((header) => aliases.includes(header));
+}
+
+function laygiatricotcsv(cells, index) {
+  return index >= 0 ? String(cells[index] || "").trim() : "";
+}
+
+async function phantichcsvsinhviencholop(file, targetClassName, targetDepartmentCode) {
+  if (!file) {
+    return { ok: true, records: [] };
+  }
+
+  if (!/\.csv$/i.test(file.name || "")) {
+    return { ok: false, message: "Vui lòng chọn file CSV hợp lệ." };
+  }
+
+  let csvText = "";
+  try {
+    csvText = await doctepcsvlophoc(file);
+  } catch (error) {
+    return { ok: false, message: "Không thể đọc file CSV. Vui lòng thử lại." };
+  }
+
+  const rows = csvText.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+  if (rows.length < 2) {
+    return { ok: false, message: "File CSV chưa có dữ liệu sinh viên." };
+  }
+
+  const normalizedHeaders = tachdongcsv(rows[0]).map(chuanhoatieudecsv);
+  const columnIndexes = {
+    mssv: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.mssv),
+    name: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.name),
+    gender: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.gender),
+    email: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.email),
+    phone: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.phone),
+    faculty: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.faculty),
+    className: timcotcsv(normalizedHeaders, CLASS_CSV_HEADER_ALIASES.className)
+  };
+
+  if (columnIndexes.mssv === -1 || columnIndexes.name === -1) {
+    return { ok: false, message: "File CSV cần có tối thiểu 2 cột: MSSV và Họ và tên." };
+  }
+
+  const importedRecords = rows.slice(1).reduce((result, row) => {
+    const cells = tachdongcsv(row);
+    if (!cells.some((cell) => String(cell || "").trim())) {
+      return result;
+    }
+
+    const mssv = laygiatricotcsv(cells, columnIndexes.mssv);
+    const name = laygiatricotcsv(cells, columnIndexes.name);
+    if (!mssv || !name) {
+      return result;
+    }
+
+    result.push(chuanhoabanghidanhsachsinhvien({
+      mssv,
+      name,
+      gender: laygiatricotcsv(cells, columnIndexes.gender),
+      email: laygiatricotcsv(cells, columnIndexes.email) || `${mssv}@student.hcmute.edu.vn`,
+      phone: laygiatricotcsv(cells, columnIndexes.phone),
+      faculty: laygiatricotcsv(cells, columnIndexes.faculty) || targetDepartmentCode,
+      className: laygiatricotcsv(cells, columnIndexes.className) || targetClassName
+    }));
+
+    return result;
+  }, []);
+
+  if (!importedRecords.length) {
+    return { ok: false, message: "Không tìm thấy dòng sinh viên hợp lệ trong file CSV." };
+  }
+
+  const normalizedRecords = importedRecords.map((record) => ({
+    ...record,
+    faculty: targetDepartmentCode,
+    className: targetClassName
+  }));
+
+  return { ok: true, records: normalizedRecords };
+}
+
+function nhapsinhvientucsvvaolop(records = []) {
+  const currentDirectory = taidanhsachsinhvien();
+  const directoryMap = new Map(
+    currentDirectory.map((record) => [String(record.mssv || "").trim().toLowerCase(), chuanhoabanghidanhsachsinhvien(record)])
+  );
+
+  records.forEach((record) => {
+    const key = String(record.mssv || "").trim().toLowerCase();
+    if (!key) {
+      return;
+    }
+
+    directoryMap.set(key, chuanhoabanghidanhsachsinhvien({
+      ...(directoryMap.get(key) || {}),
+      ...record
+    }));
+  });
+
+  luudanhsachsinhvien(Array.from(directoryMap.values()));
+  taisinhvienlophoc();
+}
+
+function taodanhsachkhoacholop(preferredDepartment = "") {
+  const fixedDepartments = laydanhsachkhoacodinh();
+  if (!preferredDepartment || fixedDepartments.some((item) => item.code === preferredDepartment)) {
+    return fixedDepartments;
+  }
+
+  const legacyDepartment = laykhoatheocode(preferredDepartment);
+  if (!legacyDepartment) {
+    return fixedDepartments;
+  }
+
+  return [
+    ...fixedDepartments,
+    {
+      ...legacyDepartment,
+      name: `${legacyDepartment.name} (dữ liệu cũ)`
+    }
+  ];
+}
+
+function taogiatrilegacygiangvien(advisorName = "") {
+  return `legacy:${String(advisorName || "").trim()}`;
+}
+
+function taonhanhienthigiangvien(item = {}) {
+  const parts = [];
+  if (item.staffId) {
+    parts.push(item.staffId);
+  }
+  if (item.username) {
+    parts.push(`@${item.username}`);
+  }
+
+  return parts.length ? `${item.fullName} (${parts.join(" - ")})` : item.fullName;
+}
+
+function taodanhsachgiangviencholop(preferredAdvisorId = "", preferredAdvisorName = "") {
+  const lecturers = laydanhsachgiangvien().map((item) => ({
+    ...item,
+    optionValue: item.id,
+    advisorName: item.fullName,
+    optionLabel: taonhanhienthigiangvien(item)
+  }));
+
+  if (preferredAdvisorId && lecturers.some((item) => item.optionValue === preferredAdvisorId)) {
+    return lecturers;
+  }
+
+  const legacyAdvisorName = String(preferredAdvisorName || "").trim();
+  if (!legacyAdvisorName) {
+    return lecturers;
+  }
+
+  return [
+    ...lecturers,
+    {
+      optionValue: taogiatrilegacygiangvien(legacyAdvisorName),
+      advisorName: legacyAdvisorName,
+      optionLabel: `${legacyAdvisorName} (dữ liệu cũ, cần chọn lại)`,
+      isLegacyAdvisor: true
+    }
+  ];
+}
+
+function taodanhsachlopsinhviencholop(preferredManagedClasses = "", departmentCode = "") {
+  const currentStudentClasses = laydanhsachlopsinhvien(departmentCode);
+  const preferredClasses = tachdanhsachtugiatrichuoi(preferredManagedClasses);
+  return laygiatriduynhatdasapxep([...currentStudentClasses, ...preferredClasses], true);
+}
+
+function renderManagedClassOptions(preferredManagedClasses = "", departmentCode = "") {
+  const managedClassOptions = document.getElementById("classStudentClassOptions");
+  if (!managedClassOptions) {
+    return;
+  }
+
+  managedClassOptions.innerHTML = taodanhsachlopsinhviencholop(preferredManagedClasses, departmentCode)
+    .map((className) => `<option value="${className}"></option>`)
+    .join("");
+}
+
+function laydanhsachlophienthi() {
+  const studentCounts = classroomStudents.reduce((result, student) => {
+    if (!student.className || HIDDEN_DEPARTMENT_CLASS_NAMES.has(student.className)) {
+      return result;
+    }
+
+    result[student.className] = (result[student.className] || 0) + 1;
+    return result;
+  }, {});
+
+  const classMap = new Map(
+    laydanhsachlopmaster()
+      .filter((item) => !HIDDEN_DEPARTMENT_CLASS_NAMES.has(item.name))
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        displayName: item.displayName || "",
+        faculty: item.departmentCode,
+        deptCode: item.departmentCode,
+        studentCount: studentCounts[item.name] || 0,
+        managedClasses: item.managedClasses || ""
+      }))
+      .map((item) => [item.name, item])
+  );
+
+  return Array.from(classMap.values()).sort((a, b) => a.name.localeCompare(b.name, "vi"));
+}
+
+function capnhatselect(select, items, config = {}) {
+  if (!select) {
+    return;
+  }
+
+  const {
+    includeAll = false,
+    includeBlank = false,
+    blankLabel = "Chưa chọn",
+    allLabel = "Tất cả",
+    emptyLabel = "Chưa có dữ liệu",
+    valueKey = "code",
+    labelBuilder = (item) => item.name,
+    preferredValue = ""
+  } = config;
+
+  const previousValue = preferredValue || select.value || (includeAll ? "all" : "");
+  let html = "";
+
+  if (includeAll) {
+    html += `<option value="all">${allLabel}</option>`;
+  }
+
+  if (includeBlank) {
+    html += `<option value="">${blankLabel}</option>`;
+  }
+
+  if (items.length) {
+    html += optionMarkup(items, valueKey, labelBuilder);
+  } else if (!includeAll && !includeBlank) {
+    html = `<option value="">${emptyLabel}</option>`;
+  }
+
+  select.innerHTML = html;
+
+  const hasPreviousValue = Array.from(select.options).some((option) => option.value === previousValue);
+  if (hasPreviousValue) {
+    select.value = previousValue;
+    return;
+  }
+
+  if (includeAll) {
+    select.value = "all";
+    return;
+  }
+
+  if (includeBlank) {
+    select.value = "";
+    return;
+  }
+
+  select.value = items[0]?.[valueKey] || "";
+}
+
+function capnhattrangthaiformlop() {
+  const fixedDepartments = laydanhsachkhoacodinh();
+  const classDepartmentInput = document.getElementById("classDepartmentInput");
+  const classAdvisorInput = document.getElementById("classAdvisorInput");
+  const classSubmitBtn = document.getElementById("classSubmitBtn");
+  const classDepartmentHint = document.getElementById("classDepartmentHint");
+  const hasDepartments = fixedDepartments.length > 0;
+  const hasLecturers = laydanhsachgiangvien().length > 0;
+  const selectedDepartmentCode = classDepartmentInput?.value || "";
+  const selectedAdvisor = classAdvisorInput?.value || "";
+  const hasValidAdvisorSelection = Boolean(selectedAdvisor) && !selectedAdvisor.startsWith("legacy:");
+  const isLegacyDepartment = Boolean(
+    selectedDepartmentCode && !fixedDepartments.some((item) => item.code === selectedDepartmentCode)
+  );
+
+  if (classDepartmentInput) {
+    classDepartmentInput.disabled = !hasDepartments;
+  }
+
+  if (classAdvisorInput) {
+    classAdvisorInput.disabled = !hasLecturers && !classAdvisorInput.value;
+  }
+
+  if (classSubmitBtn) {
+    classSubmitBtn.disabled = !hasDepartments || !hasValidAdvisorSelection;
+  }
+
+  if (classDepartmentHint) {
+    if (!hasDepartments) {
+      classDepartmentHint.textContent = "";
+      return;
+    }
+
+    if (!hasLecturers) {
+      classDepartmentHint.textContent = "Cần có ít nhất một giảng viên để thêm hoặc cập nhật lớp.";
+      return;
+    }
+
+    if (isLegacyDepartment) {
+      classDepartmentHint.textContent = "";
+      return;
+    }
+
+    if (selectedAdvisor.startsWith("legacy:")) {
+      classDepartmentHint.textContent = "Học phần này đang gắn với dữ liệu cũ. Hãy chọn lại đúng tài khoản giảng viên phụ trách.";
+      return;
+    }
+
+    classDepartmentHint.textContent = "";
+  }
+}
+
+function renderDepartmentOptions(preferredClassDepartment = "") {
+  const classDepartments = taodanhsachkhoacholop(preferredClassDepartment);
+  const masterClassDepartmentFilter = document.getElementById("masterClassDepartmentFilter");
+  const classDepartmentInput = document.getElementById("classDepartmentInput");
+
+  capnhatselect(classDepartmentInput, classDepartments, {
+    emptyLabel: "Danh sách khoa chưa sẵn sàng",
+    labelBuilder: (item) => item.name,
+    preferredValue: preferredClassDepartment
+  });
+
+  capnhatselect(masterClassDepartmentFilter, laydanhsachkhoa(), {
+    includeAll: true,
+    allLabel: "Tất cả khoa",
+    labelBuilder: (item) => item.name
+  });
+  renderManagedClassOptions(
+    document.getElementById("classManagedClassesInput")?.value || "",
+    classDepartmentInput?.value || preferredClassDepartment
+  );
+}
+
+function renderAdvisorOptions(preferredAdvisorId = "", preferredAdvisorName = "") {
+  const classAdvisorInput = document.getElementById("classAdvisorInput");
+  if (!classAdvisorInput) {
+    return;
+  }
+
+  const advisorOptions = taodanhsachgiangviencholop(preferredAdvisorId, preferredAdvisorName);
+  const preferredValue = preferredAdvisorId || (preferredAdvisorName ? taogiatrilegacygiangvien(preferredAdvisorName) : "");
+  const optionsMarkup = advisorOptions
+    .map((item) => `<option value="${item.optionValue}" data-advisor-name="${item.advisorName || ""}">${item.optionLabel}</option>`)
+    .join("");
+
+  classAdvisorInput.innerHTML = `<option value="">Chọn cố vấn học tập / giảng viên phụ trách</option>${optionsMarkup}`;
+  const hasPreferredValue = Array.from(classAdvisorInput.options).some((option) => option.value === preferredValue);
+  classAdvisorInput.value = hasPreferredValue ? preferredValue : "";
+
+  capnhattrangthaiformlop();
+}
+
+function renderClassCards(selectedDepartment = "all") {
+  const container = document.getElementById("masterClassGrid");
+  if (!container) {
+    return;
+  }
+
+  const rows = laydanhsachlophienthi();
+  const filteredRows = selectedDepartment === "all"
+    ? rows
+    : rows.filter((item) => item.deptCode === selectedDepartment);
+
+  if (!filteredRows.length) {
+    container.innerHTML = '<p class="no-data">Không tìm thấy học phần nào.</p>';
+    return;
+  }
+
+  container.innerHTML = filteredRows.map((cls) => {
+    const department = laykhoatheocode(cls.deptCode);
+    const departmentName = department ? department.name : "Chưa rõ khoa";
+    const managedClass = laylophocmastertheoid(cls.id);
+    const classTitle = cls.displayName || laytenhienthilop(cls.name) || cls.name;
+
+    return `
+      <div class="class-card">
+        ${managedClass ? `
+          <div class="class-card-actions">
+            <button type="button" class="icon-btn edit-btn" data-action="edit" data-id="${cls.id}" title="Chỉnh sửa học phần">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button type="button" class="icon-btn delete-btn" data-action="delete" data-id="${cls.id}" title="Xóa học phần">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        ` : ""}
+        <div class="class-icon"><i class="fa-solid fa-users-rectangle"></i></div>
+        <h3 class="class-name">${classTitle}</h3>
+        <p class="dept-name"><i class="fa-solid fa-building-university"></i> ${departmentName}</p>
+        <div class="class-info">
+          <span><i class="fa-solid fa-user-graduate"></i> Sĩ số: <strong>${cls.studentCount}</strong></span>
+          ${managedClass?.advisor ? `<span><i class="fa-solid fa-user-tie"></i> Phụ trách: <strong>${managedClass.advisor}</strong></span>` : ""}
+        </div>
+        <button type="button" class="view-list-btn" data-class-id="${cls.id}">
+          Xem lớp sinh viên <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    `;
+  }).join("");
+}
+
+function xemchitietlop(classId) {
+  const selectedClass = laydanhsachlophienthi().find((item) => item.id === classId);
+  if (!selectedClass) {
+    return;
+  }
+
+  const params = new URLSearchParams({
+    faculty: selectedClass.faculty,
+    className: selectedClass.name
+  });
+
+  window.location.href = `quan_ly_lop_hoc.html?${params.toString()}`;
+}
+
+function datlaiformlop(preferredDepartment = "", preferredAdvisorId = "", preferredAdvisorName = "") {
+  editingClassId = "";
+  datlaiform("classForm");
+  const classDisplayNameInput = document.getElementById("classDisplayNameInput");
+  const classManagedClassesInput = document.getElementById("classManagedClassesInput");
+  if (classDisplayNameInput) {
+    classDisplayNameInput.value = "";
+  }
+  if (classManagedClassesInput) {
+    classManagedClassesInput.value = "";
+  }
+  renderDepartmentOptions(preferredDepartment);
+  renderAdvisorOptions(preferredAdvisorId, preferredAdvisorName);
+  capnhatnut("classSubmitBtn", '<i class="fa-solid fa-plus"></i>Thêm học phần');
+}
+
+function khoitaotrangdulieutong(selectedDepartment = "") {
+  taisinhvienlophoc();
+  renderDepartmentOptions();
+  renderAdvisorOptions();
+  renderManagedClassOptions();
+  const classFilter = document.getElementById("masterClassDepartmentFilter");
+  const activeDepartment = selectedDepartment || classFilter?.value || "all";
+
+  if (classFilter) {
+    classFilter.value = activeDepartment;
+  }
+
+  renderClassCards(activeDepartment);
+}
+
+function batdausuatuphantu(classItem) {
+  if (!classItem) {
+    return;
+  }
+
+  editingClassId = classItem.id;
+  document.getElementById("classNameInput").value = classItem.name;
+  document.getElementById("classDisplayNameInput").value = classItem.displayName || "";
+  document.getElementById("classManagedClassesInput").value = classItem.managedClasses || "";
+  renderDepartmentOptions(classItem.departmentCode);
+  renderAdvisorOptions(classItem.advisorId || "", classItem.advisor || "");
+  renderManagedClassOptions(classItem.managedClasses || "", classItem.departmentCode);
+  document.getElementById("classDepartmentInput").value = classItem.departmentCode;
+  capnhatnut("classSubmitBtn", '<i class="fa-solid fa-floppy-disk"></i>Cập nhật học phần');
+}
+
+function xoaloptuphantu(classItem) {
+  if (!classItem) {
+    return;
+  }
+
+  if (!confirm(`Xóa học phần "${classItem.name}"?`)) {
+    return;
+  }
+
+  const result = xoalophocmaster(classItem.id);
+  if (!result.ok) {
+    alert(result.message);
+    return;
+  }
+
+  hienhithongbao(result.message);
+  if (editingClassId === classItem.id) {
+    datlaiformlop();
+  }
+  khoitaotrangdulieutong();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const classForm = document.getElementById("classForm");
+  const classFilter = document.getElementById("masterClassDepartmentFilter");
+  const classGrid = document.getElementById("masterClassGrid");
+  const classAdvisorInput = document.getElementById("classAdvisorInput");
+  const activeUser = laynguoidungdangnhap();
+
+  if (!activeUser || activeUser.role !== "admin") {
+    window.location.replace("khoa_lop.html");
+    return;
+  }
+
+  if (!classForm) {
+    return;
+  }
+
+  khoitaotrangdulieutong();
+
+  classForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const advisorSelect = document.getElementById("classAdvisorInput");
+    const selectedAdvisorOption = advisorSelect?.selectedOptions?.[0] || null;
+    const selectedAdvisorValue = advisorSelect?.value || "";
+    const payload = {
+      name: document.getElementById("classNameInput").value,
+      displayName: document.getElementById("classDisplayNameInput").value,
+      departmentCode: document.getElementById("classDepartmentInput").value,
+      advisorId: selectedAdvisorValue.startsWith("legacy:") ? "" : selectedAdvisorValue,
+      advisor: selectedAdvisorOption?.dataset.advisorName || "",
+      managedClasses: document.getElementById("classManagedClassesInput").value
+    };
+    const csvInput = document.getElementById("classStudentCsvInput");
+    const csvFile = csvInput?.files?.[0] || null;
+    const parsedCsv = await phantichcsvsinhviencholop(csvFile, payload.name, payload.departmentCode);
+    if (!parsedCsv.ok) {
+      alert(parsedCsv.message);
+      return;
+    }
+
+    const result = editingClassId ? capnhatlophocmaster(editingClassId, payload) : themlophocmaster(payload);
+    if (!result.ok) {
+      alert(result.message);
+      return;
+    }
+
+    if (parsedCsv.records.length) {
+      nhapsinhvientucsvvaolop(parsedCsv.records);
+    }
+
+    const successMessage = parsedCsv.records.length
+      ? `${result.message} Đã nhập ${parsedCsv.records.length} sinh viên từ CSV.`
+      : result.message;
+
+    hienhithongbao(successMessage);
+    datlaiformlop();
+    khoitaotrangdulieutong(result.item?.departmentCode || "all");
+  });
+
+  document.getElementById("classCancelBtn")?.addEventListener("click", function () {
+    datlaiformlop();
+  });
+
+  document.getElementById("classDepartmentInput")?.addEventListener("change", function () {
+    renderManagedClassOptions(
+      document.getElementById("classManagedClassesInput")?.value || "",
+      document.getElementById("classDepartmentInput")?.value || ""
+    );
+    capnhattrangthaiformlop();
+  });
+
+  classAdvisorInput?.addEventListener("change", capnhattrangthaiformlop);
+
+  classFilter?.addEventListener("change", function () {
+    renderClassCards(classFilter.value || "all");
+  });
+
+  classGrid?.addEventListener("click", function (event) {
+    const actionButton = event.target.closest("[data-action][data-id]");
+    if (actionButton) {
+      const classItem = laylophocmastertheoid(actionButton.dataset.id);
+      if (!classItem) {
+        return;
+      }
+
+      if (actionButton.dataset.action === "edit") {
+        batdausuatuphantu(classItem);
+        return;
+      }
+
+      if (actionButton.dataset.action === "delete") {
+        xoaloptuphantu(classItem);
+        return;
+      }
+    }
+
+    const viewButton = event.target.closest(".view-list-btn");
+    if (!viewButton) {
+      return;
+    }
+
+    const classId = viewButton.dataset.classId;
+    if (classId) {
+      xemchitietlop(classId);
+    }
+  });
+});
+
+</script>
+</body>
+</html>

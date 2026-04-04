@@ -1,0 +1,621 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thông báo & Tin tức</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="announcement-section">
+          <div class="row g-0">
+            <div class="col-12">
+              <section class="student-form-card card-form card border-0 shadow-sm">
+            <header>
+            <h2 class="notice-title">Gửi thông báo</h2>
+
+            </header>
+            <form id="announceForm" class="student-form">
+              <div class="form-row">
+                <input type="text" id="announce-title" class="form-control" placeholder="Tiêu đề thông báo" required>
+              </div>
+
+              <div class="form-row hidden" id="announce-admin-scope">
+                <select id="announce-audience" class="form-select" required aria-label="Nhóm đối tượng nhận thông báo">
+                  <option value="student">Sinh viên</option>
+                  <option value="lecturer">Giảng viên</option>
+                </select>
+                <select id="announce-department" class="form-select" aria-label="Phạm vi khoa nhận thông báo">
+                  <option value="all">Tất cả các khoa</option>
+                </select>
+                <select id="announce-class" class="form-select" aria-label="Phạm vi học phần nhận thông báo">
+                  <option value="all">Tất cả các học phần</option>
+                </select>
+              </div>
+
+              <div class="form-row hidden" id="announce-lecturer-scope">
+                <select id="announce-lecturer-class" class="form-select" aria-label="Học phần sinh viên nhận thông báo">
+                  <option value="">Chọn học phần bạn phụ trách</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <textarea id="announce-content" class="form-control" rows="5" placeholder="Nhập nội dung thông báo" required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="announce-file">File đính kèm</label>
+                <input type="file" id="announce-file" class="form-control file-upload-control">
+              </div>
+
+              <button type="submit" class="add-btn btn btn-primary">
+                <i class="fa-solid fa-paper-plane"></i>
+                Gửi thông báo
+              </button>
+            </form>
+              </section>
+            </div>
+
+            <div class="col-12">
+              <section class="student-table-card history-section card border-0 shadow-sm">
+            <header>
+            <h2 class="notice-title">Lịch sử thông báo đã gửi</h2>
+
+            </header>
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Tiêu đề</th>
+                  <th>Đối tượng</th>
+                  <th>Thời gian</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="announcement-list">
+                <tr>
+                  <td colspan="4" class="announcement-empty-cell">Chưa có thông báo nào được gửi.</td>
+                </tr>
+              </tbody>
+            </table>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="announcementDetailModal" class="modal" role="dialog" aria-modal="true">
+          <div class="modal-content">
+            <h3>Chi tiết thông báo</h3>
+
+            <div class="form-group">
+              <label>Tiêu đề</label>
+              <div class="announcement-detail" id="detailTitle"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Đối tượng</label>
+                <div class="announcement-detail" id="detailTarget"></div>
+              </div>
+
+              <div class="form-group">
+                <label>Thời gian</label>
+                <div class="announcement-detail" id="detailDate"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Nội dung</label>
+              <div class="announcement-detail announcement-content" id="detailContent"></div>
+            </div>
+
+            <div class="form-group">
+              <label>File đính kèm</label>
+              <div class="announcement-detail" id="detailAttachment"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="closeAnnouncementModalBtn">
+                <i class="fas fa-xmark"></i> Đóng
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+let lichSuThongBaoDaGui = [];
+
+function laythoigianghientai() {
+  const now = new Date();
+  return now.toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function docfiledinhkemthongbao(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+
+    if (file.size > ANNOUNCEMENT_MAX_FILE_SIZE) {
+      reject(new Error("FILE_TOO_LARGE"));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      resolve({
+        name: file.name,
+        type: file.type || "",
+        size: file.size,
+        dataUrl: typeof reader.result === "string" ? reader.result : ""
+      });
+    };
+    reader.onerror = function () {
+      reject(new Error("FILE_READ_FAILED"));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function hienthidanhsachthongbao() {
+  const listContainer = document.getElementById("announcement-list");
+  if (!listContainer) {
+    return;
+  }
+
+  if (lichSuThongBaoDaGui.length === 0) {
+    listContainer.innerHTML = '<tr><td colspan="4" class="announcement-empty-cell">Chưa có thông báo nào được gửi.</td></tr>';
+    return;
+  }
+
+  listContainer.innerHTML = lichSuThongBaoDaGui.map((item) => `
+    <tr>
+      <td>
+        <span class="announcement-title-main">
+          <strong>${item.title}</strong>
+          ${item.attachment ? '<span class="announcement-attachment-badge"><i class="fa-solid fa-paperclip"></i> Có file</span>' : ""}
+        </span>
+      </td>
+      <td><span class="badge-target">${item.target}</span></td>
+      <td>${item.date}</td>
+      <td class="action-icons">
+        <button type="button" class="view-announcement-btn" data-id="${item.id}" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function tailichsuthongbaodagui(activeUser) {
+  lichSuThongBaoDaGui = laylichsuthongbaodagui(activeUser);
+}
+
+function xemchitietthongbao(id) {
+  const numericId = Number(id);
+  const item = lichSuThongBaoDaGui.find((announcement) => Number(announcement.id) === numericId);
+  if (!item) {
+    return;
+  }
+
+  const modal = document.getElementById("announcementDetailModal");
+  const detailTitle = document.getElementById("detailTitle");
+  const detailTarget = document.getElementById("detailTarget");
+  const detailDate = document.getElementById("detailDate");
+  const detailContent = document.getElementById("detailContent");
+  const detailAttachment = document.getElementById("detailAttachment");
+
+  if (!modal || !detailTitle || !detailTarget || !detailDate || !detailContent || !detailAttachment) {
+    alert(`NỘI DUNG THÔNG BÁO:\n\n${item.content}`);
+    return;
+  }
+
+  detailTitle.textContent = item.title;
+  detailTarget.textContent = item.target;
+  detailDate.textContent = item.date;
+  detailContent.textContent = item.content;
+  detailAttachment.innerHTML = item.attachment ? `
+    <div class="announcement-attachment-box">
+      <div class="announcement-attachment-meta">
+        <span class="announcement-attachment-name">${item.attachment.name}</span>
+        <span class="announcement-attachment-size">${dinhdangkichthuoctepthongbao(item.attachment.size)}</span>
+      </div>
+      <a class="announcement-attachment-link" href="${item.attachment.dataUrl}" download="${item.attachment.name}">
+        <i class="fa-solid fa-download"></i>
+        Tải file
+      </a>
+    </div>
+  ` : "Không có file đính kèm.";
+  modal.classList.add("active");
+}
+
+function donghopthoaichitietthongbao() {
+  const modal = document.getElementById("announcementDetailModal");
+  if (modal) {
+    modal.classList.remove("active");
+  }
+}
+
+function laquantrivienthongbao(activeUser) {
+  return String(activeUser?.role || "").trim().toLowerCase() === "admin";
+}
+
+function taotuychonnhomnguoinhanthongbao(activeUser) {
+  if (laquantrivienthongbao(activeUser)) {
+    return [
+      { value: "student", label: "Sinh viên" },
+      { value: "lecturer", label: "Giảng viên" }
+    ];
+  }
+
+  return [{ value: "student", label: "Sinh viên" }];
+}
+
+
+function dienchonthongbao(select, options, preferredValue = "") {
+  if (!select) {
+    return "";
+  }
+
+  const fallbackValue = options[0]?.value || "";
+  const nextValue = options.some((item) => item.value === preferredValue) ? preferredValue : fallbackValue;
+  select.innerHTML = options.map((item) => `<option value="${item.value}">${item.label}</option>`).join("");
+  select.value = nextValue;
+  return nextValue;
+}
+
+function laydanhsachlopthongbaohople() {
+  return typeof laydanhsachlopmaster === "function"
+    ? laydanhsachlopmaster()
+      .map((item) => ({
+        name: String(item.name || "").trim(),
+        displayName: String((typeof laytenhienthilop === "function" ? laytenhienthilop(item.name) : "") || item.displayName || item.name || "").trim(),
+        departmentCode: String(item.departmentCode || "").trim(),
+        advisorId: String(item.advisorId || "").trim(),
+        advisor: String(item.advisor || "").trim()
+      }))
+      .filter((item) => item.name)
+      .sort((a, b) => sapxeptheochuoi(a.name, b.name))
+    : [];
+}
+
+function laytenhienthithongbaolop(className = "") {
+  const normalizedClassName = String(className || "").trim();
+  if (!normalizedClassName) {
+    return "";
+  }
+
+  const matchedClass = laydanhsachlopthongbaohople().find((item) => item.name === normalizedClassName);
+  return (typeof laytenhienthilop === "function" ? laytenhienthilop(normalizedClassName) : "") || matchedClass?.displayName || normalizedClassName;
+}
+
+function laydanhsachlopthongbao(theoKhoa = "all") {
+  const departmentCode = String(theoKhoa || "").trim();
+  return laydanhsachlopthongbaohople()
+    .filter((item) => departmentCode === "all" || item.departmentCode === departmentCode)
+    .map((item) => item.name);
+}
+
+function timkhoacuathongbaolop(className = "") {
+  const normalizedClassName = String(className || "").trim();
+  if (!normalizedClassName) {
+    return "";
+  }
+
+  const masterClass = laydanhsachlopthongbaohople().find((item) => item.name === normalizedClassName);
+  if (masterClass?.departmentCode) {
+    return masterClass.departmentCode;
+  }
+
+  return "";
+}
+
+function laytenkhoathongbao(departmentCode = "") {
+  const department = typeof laykhoatheocode === "function" ? laykhoatheocode(departmentCode) : null;
+  return department?.name || String(departmentCode || "").trim();
+}
+
+function laydanhsachlopgiangvienthongbao(activeUser = laynguoidungdangnhap()) {
+  const masterClasses = laydanhsachlopthongbaohople();
+  const managedClassSet = new Set(
+    typeof laydanhsachlopgiangvienquanly === "function"
+      ? laydanhsachlopgiangvienquanly(activeUser)
+      : []
+  );
+
+  return masterClasses
+    .filter((item) => managedClassSet.has(item.name))
+    .map((item) => item.name);
+}
+
+function taomotaithongbaochoadmin() {
+  const audienceGroup = document.getElementById("announce-audience")?.value || "student";
+  const departmentCode = document.getElementById("announce-department")?.value || "all";
+  const className = document.getElementById("announce-class")?.value || "all";
+  const targetPrefix = audienceGroup === "lecturer" ? "Giảng viên" : "Sinh viên";
+
+  if (className !== "all") {
+    return {
+      target: `${targetPrefix} học phần ${laytenhienthithongbaolop(className) || className}`,
+      audienceType: "class",
+      audienceValue: className,
+      recipientGroup: audienceGroup,
+      scopeDepartmentCode: departmentCode !== "all" ? departmentCode : timkhoacuathongbaolop(className),
+      scopeClassName: className
+    };
+  }
+
+  if (departmentCode !== "all") {
+    return {
+      target: `${targetPrefix} ${laytenkhoathongbao(departmentCode)}`,
+      audienceType: "department",
+      audienceValue: departmentCode,
+      recipientGroup: audienceGroup,
+      scopeDepartmentCode: departmentCode,
+      scopeClassName: ""
+    };
+  }
+
+  if (audienceGroup === "lecturer") {
+    return {
+      target: "Tất cả giảng viên",
+      audienceType: "all_lecturers",
+      audienceValue: "",
+      recipientGroup: "lecturer",
+      scopeDepartmentCode: "",
+      scopeClassName: ""
+    };
+  }
+
+  return {
+    target: "Tất cả sinh viên",
+    audienceType: "all_students",
+    audienceValue: "",
+    recipientGroup: "student",
+    scopeDepartmentCode: "",
+    scopeClassName: ""
+  };
+}
+
+function taomotaithongbaochogiangvien(activeUser = laynguoidungdangnhap()) {
+  const lecturerClassSelect = document.getElementById("announce-lecturer-class");
+  const managedClasses = laydanhsachlopgiangvienthongbao(activeUser);
+  const selectedClassName = lecturerClassSelect?.value || managedClasses[0] || "";
+
+  if (!selectedClassName || !managedClasses.includes(selectedClassName)) {
+    return null;
+  }
+
+  return {
+    target: `Sinh viên học phần ${laytenhienthithongbaolop(selectedClassName) || selectedClassName}`,
+    audienceType: "class",
+    audienceValue: selectedClassName,
+    recipientGroup: "student",
+    scopeDepartmentCode: timkhoacuathongbaolop(selectedClassName),
+    scopeClassName: selectedClassName
+  };
+}
+
+function taomotaithongbao(activeUser = laynguoidungdangnhap()) {
+  if (laquantrivienthongbao(activeUser)) {
+    return taomotaithongbaochoadmin();
+  }
+
+  return taomotaithongbaochogiangvien(activeUser);
+}
+
+function capnhatlophocgiangvienthongbao(activeUser = laynguoidungdangnhap(), preferredClassName = "") {
+  const lecturerClassSelect = document.getElementById("announce-lecturer-class");
+  if (!lecturerClassSelect) {
+    return;
+  }
+
+  const managedClasses = laydanhsachlopgiangvienthongbao(activeUser);
+  const options = managedClasses.length
+    ? managedClasses.map((className) => ({ value: className, label: laytenhienthithongbaolop(className) || className }))
+    : [{ value: "", label: "Chưa có học phần phụ trách" }];
+
+  dienchonthongbao(lecturerClassSelect, options, preferredClassName);
+  lecturerClassSelect.disabled = !managedClasses.length;
+}
+
+function capnhatphamvithongbaoadmin(preferredValues = {}) {
+  const departmentSelect = document.getElementById("announce-department");
+  const classSelect = document.getElementById("announce-class");
+  if (!departmentSelect || !classSelect) {
+    return;
+  }
+
+  const departments = typeof laydanhsachkhoa === "function"
+    ? laydanhsachkhoa().slice().sort((a, b) => sapxeptheochuoi(a.name, b.name))
+    : [];
+  const currentDepartmentValue = preferredValues.departmentCode || departmentSelect.value || "all";
+  const nextDepartmentValue = dienchonthongbao(
+    departmentSelect,
+    [{ value: "all", label: "Tất cả các khoa" }, ...departments.map((item) => ({ value: item.code, label: item.name }))],
+    currentDepartmentValue
+  );
+
+  const classOptions = laydanhsachlopthongbao(nextDepartmentValue);
+  dienchonthongbao(
+    classSelect,
+    [{ value: "all", label: "Tất cả các học phần" }, ...classOptions.map((className) => ({ value: className, label: laytenhienthithongbaolop(className) || className }))],
+    preferredValues.className || classSelect.value || "all"
+  );
+}
+
+function khoitaobolocthongbao(selectedAudience = "", activeUser = laynguoidungdangnhap()) {
+  const audienceSelect = document.getElementById("announce-audience");
+  const adminScope = document.getElementById("announce-admin-scope");
+  const lecturerScope = document.getElementById("announce-lecturer-scope");
+  if (!audienceSelect || !adminScope || !lecturerScope) {
+    return;
+  }
+
+  const isAdmin = laquantrivienthongbao(activeUser);
+  const audienceOptions = taotuychonnhomnguoinhanthongbao(activeUser);
+  const audienceValue = selectedAudience || audienceOptions[0]?.value || "student";
+  dienchonthongbao(audienceSelect, audienceOptions, audienceValue);
+
+  adminScope.classList.toggle("hidden", !isAdmin);
+  lecturerScope.classList.toggle("hidden", isAdmin);
+  audienceSelect.disabled = !isAdmin;
+
+  if (isAdmin) {
+    capnhatphamvithongbaoadmin();
+    return;
+  }
+
+  capnhatlophocgiangvienthongbao(activeUser);
+}
+
+function khoitaotrangthongbao() {
+  const announceForm = document.getElementById("announceForm");
+  const closeAnnouncementModalBtn = document.getElementById("closeAnnouncementModalBtn");
+  const announcementDetailModal = document.getElementById("announcementDetailModal");
+  const announcementList = document.getElementById("announcement-list");
+  const attachmentInput = document.getElementById("announce-file");
+
+  if (!announceForm || announceForm.dataset.initialized === "true") {
+    return;
+  }
+
+  announceForm.dataset.initialized = "true";
+  const activeUser = laynguoidungdangnhap();
+  khoitaobolocthongbao("", activeUser);
+  tailichsuthongbaodagui(activeUser);
+  hienthidanhsachthongbao();
+
+  const audienceSelect = document.getElementById("announce-audience");
+  const departmentSelect = document.getElementById("announce-department");
+
+  if (audienceSelect) {
+    audienceSelect.addEventListener("change", function () {
+      khoitaobolocthongbao(audienceSelect.value, activeUser);
+    });
+  }
+
+  if (departmentSelect) {
+    departmentSelect.addEventListener("change", function () {
+      capnhatphamvithongbaoadmin({ departmentCode: departmentSelect.value, className: "all" });
+    });
+  }
+
+  if (closeAnnouncementModalBtn) {
+    closeAnnouncementModalBtn.addEventListener("click", donghopthoaichitietthongbao);
+  }
+
+  if (announcementDetailModal) {
+    announcementDetailModal.addEventListener("click", function (event) {
+      if (event.target === announcementDetailModal) {
+        donghopthoaichitietthongbao();
+      }
+    });
+  }
+
+  if (announcementList) {
+    announcementList.addEventListener("click", function (event) {
+      const viewButton = event.target.closest(".view-announcement-btn");
+      if (viewButton) {
+        xemchitietthongbao(viewButton.dataset.id);
+      }
+    });
+  }
+
+  announceForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const title = document.getElementById("announce-title").value.trim();
+    const audiencePayload = taomotaithongbao(activeUser);
+    const target = audiencePayload?.target || "";
+    const audienceType = audiencePayload?.audienceType || "";
+    const audienceValue = audiencePayload?.audienceValue || "";
+    const content = document.getElementById("announce-content").value.trim();
+    const attachmentFile = attachmentInput && attachmentInput.files ? attachmentInput.files[0] : null;
+
+    if (!audiencePayload) {
+      alert(laquantrivienthongbao(activeUser)
+        ? "Vui lòng chọn phạm vi nhận thông báo."
+        : "Bạn chưa có học phần phụ trách để gửi thông báo.");
+      return;
+    }
+
+    if (!title || !target || !content || !audienceType) {
+      alert("Vui lòng nhập đầy đủ thông tin thông báo.");
+      return;
+    }
+
+    let attachment = null;
+    try {
+      attachment = await docfiledinhkemthongbao(attachmentFile);
+    } catch (error) {
+      if (error.message === "FILE_TOO_LARGE") {
+        alert("File đính kèm vượt quá 1 MB. Vui lòng chọn file nhỏ hơn.");
+      } else {
+        alert("Không thể đọc file đính kèm. Vui lòng thử lại.");
+      }
+      return;
+    }
+
+    const result = themthongbaohethong({
+      title,
+      target,
+      audienceType,
+      audienceValue,
+      recipientGroup: audiencePayload?.recipientGroup || "student",
+      scopeDepartmentCode: audiencePayload?.scopeDepartmentCode || "",
+      scopeClassName: audiencePayload?.scopeClassName || "",
+      date: laythoigianghientai(),
+      createdAt: laythoigianhethong(),
+      content,
+      attachment,
+      createdById: activeUser?.id || ""
+    });
+
+    if (!result.ok) {
+      alert(result.message);
+      return;
+    }
+
+    announceForm.reset();
+    khoitaobolocthongbao("", activeUser);
+    tailichsuthongbaodagui(activeUser);
+    hienthidanhsachthongbao();
+    hienhithongbao(result.message);
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", khoitaotrangthongbao);
+} else {
+  khoitaotrangthongbao();
+}
+
+</script>
+</body>
+</html>

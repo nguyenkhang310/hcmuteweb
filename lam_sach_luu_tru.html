@@ -1,0 +1,243 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Làm sạch dữ liệu đã lưu</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #183153;
+      --muted: #5f6f86;
+      --accent: #0b6efd;
+      --success: #198754;
+      --border: #d8e1ee;
+      --shadow: 0 20px 45px rgba(24, 49, 83, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(11, 110, 253, 0.12), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(680px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.75rem, 4vw, 2.4rem);
+      line-height: 1.15;
+    }
+
+    p {
+      margin: 0 0 12px;
+      line-height: 1.6;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(25, 135, 84, 0.08);
+      border: 1px solid rgba(25, 135, 84, 0.18);
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .info-grid {
+      display: grid;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .info-box {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: #fbfdff;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      word-break: break-word;
+      color: var(--accent);
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .button.secondary {
+      background: #e9f1ff;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <header>
+    <h1>Làm sạch dữ liệu đã lưu</h1>
+    <p class="muted">
+      Trang này chỉ dùng để xóa dữ liệu đang được lưu bởi website trong trình duyệt hiện tại.
+      Nó không chỉnh sửa chức năng của hệ thống.
+    </p>
+
+    <div class="status" id="status">Đang làm sạch dữ liệu đã lưu...</div>
+
+    </header>
+    <section class="info-grid">
+      <article class="info-box">
+        <span class="label">Ngữ cảnh hiện tại</span>
+        <div id="contextValue"></div>
+      </article>
+      <article class="info-box">
+        <span class="label">Storage đã xóa</span>
+        <ul id="summaryList"></ul>
+      </article>
+    </section>
+
+    <p class="muted">
+      Nếu bạn test cả 2 cách chạy, hãy mở trang này một lần bằng <code>file:///...</code>
+      và một lần bằng URL từ Live Server để dọn sạch dữ liệu ở cả hai nơi.
+    </p>
+
+    <footer class="actions">
+      <a class="button" href="dang_nhap.html">Mở trang đăng nhập</a>
+      <button class="button secondary" type="button" id="reloadButton">Tải lại trang này</button>
+    </footer>
+  </main>
+
+  <script>
+(async function () {
+  const statusElement = document.getElementById("status");
+  const contextValueElement = document.getElementById("contextValue");
+  const summaryListElement = document.getElementById("summaryList");
+  const reloadButton = document.getElementById("reloadButton");
+
+  reloadButton.addEventListener("click", function () {
+    window.location.reload();
+  });
+
+  function addSummaryItem(label, value) {
+    const item = document.createElement("li");
+    item.textContent = `${label}: ${value}`;
+    summaryListElement.appendChild(item);
+  }
+
+  function renderContext() {
+    const isFileMode = window.location.protocol === "file:";
+    const contextText = isFileMode
+      ? `file:/// (${window.location.pathname})`
+      : `${window.location.origin}${window.location.pathname}`;
+    contextValueElement.innerHTML = `<code>${contextText}</code>`;
+  }
+
+  async function clearCachesIfPossible() {
+    if (!("caches" in window)) {
+      return 0;
+    }
+
+    const cacheKeys = await caches.keys();
+    await Promise.all(cacheKeys.map(function (key) {
+      return caches.delete(key);
+    }));
+    return cacheKeys.length;
+  }
+
+  async function unregisterServiceWorkersIfPossible() {
+    if (!("serviceWorker" in navigator)) {
+      return 0;
+    }
+
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(function (registration) {
+      return registration.unregister();
+    }));
+    return registrations.length;
+  }
+
+  renderContext();
+
+  try {
+    const localKeyCount = localStorage.length;
+    const sessionKeyCount = sessionStorage.length;
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    const deletedCaches = await clearCachesIfPossible();
+    const deletedServiceWorkers = await unregisterServiceWorkersIfPossible();
+
+    addSummaryItem("localStorage", `${localKeyCount} muc`);
+    addSummaryItem("sessionStorage", `${sessionKeyCount} muc`);
+    addSummaryItem("Cache Storage", `${deletedCaches} muc`);
+    addSummaryItem("Service Worker", `${deletedServiceWorkers} muc`);
+
+    statusElement.textContent = "Đã làm sạch xong dữ liệu đã lưu cho ngữ cảnh hiện tại.";
+  } catch (error) {
+    statusElement.textContent = "Không thể làm sạch tự động trong ngữ cảnh hiện tại.";
+    addSummaryItem("Chi tiết lỗi", error && error.message ? error.message : "Không xác định");
+  }
+}());
+
+</script>
+</body>
+</html>

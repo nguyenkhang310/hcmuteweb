@@ -1,0 +1,222 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch coi thi</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <my-sidebar></my-sidebar>
+
+    <div class="main">
+      <my-header></my-header>
+
+      <main class="main-content container-fluid py-3">
+        <section class="schedule-page">
+          <div class="row g-0">
+            <div class="col-12">
+              <section class="student-table-card card border-0 shadow-sm">
+                <header class="table-header">
+                  <div>
+                    <h3>Lịch coi thi</h3>
+                  </div>
+
+                  <div class="table-tools exam-schedule-tools">
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-school"></i>
+                      <select id="examSchoolYearFilter" class="form-select"></select>
+                    </div>
+
+                    <div class="schedule-filter">
+                      <i class="fa-solid fa-book-open"></i>
+                      <select id="examSemesterFilter" class="form-select"></select>
+                    </div>
+                  </div>
+                </header>
+
+                <p class="exam-caption">Phân công coi thi</p>
+
+                <div class="exam-table-wrap table-responsive">
+                  <table class="exam-table table table-hover align-middle">
+                    <thead>
+                      <tr>
+                        <th>Giảng viên</th>
+                        <th>Môn thi</th>
+                        <th>Ngày thi</th>
+                        <th>Giờ thi</th>
+                        <th>Phòng thi</th>
+                        <th>Địa điểm</th>
+                        <th>Số SV</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                      </tr>
+                    </thead>
+                    <tbody id="examDutyTable"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <my-footer></my-footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="he_thong.js"></script>
+  <script>
+const EXAM_SCHEDULE_TEMPLATE = [
+  {
+    subject: "Thiết kế Web",
+    examDate: "2026-04-24",
+    examTime: "13:00 - 15:00",
+    examRoom: "A5-204",
+    location: "Cơ sở 1",
+    studentCount: "58",
+    role: "Giám thị 1",
+    note: "Có mặt trước 30 phút"
+  },
+  {
+    subject: "Luật thương mại điện tử",
+    examDate: "2026-04-26",
+    examTime: "07:00 - 09:00",
+    examRoom: "B3-101",
+    location: "Cơ sở 1",
+    studentCount: "74",
+    role: "Giám thị 2",
+    note: "Nhận túi đề tại P.KTĐBCL"
+  },
+  {
+    subject: "Quản trị bán hàng",
+    examDate: "2026-04-29",
+    examTime: "09:30 - 11:30",
+    examRoom: "A1-109",
+    location: "Cơ sở 1",
+    studentCount: "66",
+    role: "Giám sát hành lang",
+    note: "Kiểm tra sơ đồ phòng thi"
+  }
+];
+
+function dienLuaChonCoiThi(selectId, values, selectedValue = "") {
+  const select = document.getElementById(selectId);
+  if (!select) {
+    return;
+  }
+
+  select.innerHTML = values.map((value) => `<option value="${value}">${value}</option>`).join("");
+  select.value = values.includes(selectedValue) ? selectedValue : (values[0] || "");
+}
+
+function tinhTrangThaiLichThi(examDate = "") {
+  const targetDate = new Date(`${examDate}T00:00:00`);
+  if (Number.isNaN(targetDate.getTime())) {
+    return "";
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (targetDate > today) {
+    return "Sắp diễn ra";
+  }
+
+  if (targetDate.getTime() === today.getTime()) {
+    return "Hôm nay";
+  }
+
+  return "Đã diễn ra";
+}
+
+function taoDongLichCoiThi() {
+  const activeUser = laynguoidungdangnhap();
+  const lecturerName = activeUser?.fullName || "Giảng viên";
+  const managedClasses = typeof laydanhsachlopgiangvienquanly === "function"
+    ? laydanhsachlopgiangvienquanly(activeUser)
+    : [];
+
+  return managedClasses.map((classCode, index) => {
+    const template = EXAM_SCHEDULE_TEMPLATE[index % EXAM_SCHEDULE_TEMPLATE.length];
+    const classInfo = typeof laythongtinlophocdiem === "function"
+      ? laythongtinlophocdiem(classCode)
+      : { subject: classCode };
+
+    return {
+      schoolYear: CURRENT_SCHOOL_YEAR,
+      semester: CURRENT_SEMESTER,
+      lecturerName,
+      subject: classInfo.subject || template.subject,
+      examDate: template.examDate,
+      examTime: template.examTime,
+      examRoom: template.examRoom,
+      location: template.location,
+      studentCount: template.studentCount,
+      role: template.role,
+      status: tinhTrangThaiLichThi(template.examDate),
+      note: template.note
+    };
+  });
+}
+
+function renderLichCoiThi() {
+  const tableBody = document.getElementById("examDutyTable");
+  if (!tableBody) {
+    return;
+  }
+
+  const activeUser = laynguoidungdangnhap();
+  if (!activeUser || activeUser.role !== "lecturer") {
+    tableBody.innerHTML = '<tr><td colspan="10" class="exam-empty">Không có dữ liệu để hiển thị.</td></tr>';
+    return;
+  }
+
+  const schoolYear = document.getElementById("examSchoolYearFilter")?.value || CURRENT_SCHOOL_YEAR;
+  const semester = document.getElementById("examSemesterFilter")?.value || CURRENT_SEMESTER;
+  const records = taoDongLichCoiThi().filter((item) => item.schoolYear === schoolYear && item.semester === semester);
+
+  if (!records.length) {
+    tableBody.innerHTML = '<tr><td colspan="10" class="exam-empty">Không có lịch coi thi phù hợp.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = records.map((item) => `
+    <tr>
+      <td>${item.lecturerName}</td>
+      <td>${item.subject}</td>
+      <td>${item.examDate}</td>
+      <td>${item.examTime}</td>
+      <td>${item.examRoom}</td>
+      <td>${item.location}</td>
+      <td>${item.studentCount}</td>
+      <td>${item.role}</td>
+      <td>${item.status}</td>
+      <td>${item.note}</td>
+    </tr>
+  `).join("");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  dienLuaChonCoiThi("examSchoolYearFilter", [CURRENT_SCHOOL_YEAR], CURRENT_SCHOOL_YEAR);
+  dienLuaChonCoiThi("examSemesterFilter", [CURRENT_SEMESTER], CURRENT_SEMESTER);
+
+  ["examSchoolYearFilter", "examSemesterFilter"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", renderLichCoiThi);
+  });
+
+  renderLichCoiThi();
+});
+  </script>
+</body>
+</html>
