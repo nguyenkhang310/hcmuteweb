@@ -1577,12 +1577,12 @@ my-footer {
 }
 
 .exam-table-wrap {
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .exam-table {
     width: 100%;
-    min-width: 0;
+    min-width: 900px;
     table-layout: fixed;
     border-collapse: collapse;
     background: #fff;
@@ -2212,6 +2212,7 @@ my-footer {
 
 .student-table {
     width: 100%;
+    min-width: 900px;
     border-collapse: collapse;
     margin-top: 10px;
     overflow: hidden;
