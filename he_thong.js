@@ -1,4 +1,4 @@
-﻿/* /../ =======================================================================
+/* /../ =======================================================================
    /../ COMPONENT HE THONG - class My...
    /../ Chi khai bao class truoc de de tim component khung giao dien.
    /../ Phan customElements.define(...) duoc giu o cuoi file de khoi tao sau khi dong bo auth.
@@ -121,7 +121,7 @@ class MyFooter extends HTMLElement {
    /../ Gồm component khung hệ thống, xác thực, phân quyền và helper tái sử dụng
    /../ ======================================================================= */
 
-const LOGIN_PAGE = "dang_nhap.html";
+const LOGIN_PAGE = "index.html";
 const ACCOUNT_MANAGEMENT_PAGE = "quan_ly_tai_khoan.html";
 const MASTER_DATA_PAGE = "du_lieu_tong.html";
 const USER_STORAGE_KEY = "accounts_hcmute";
