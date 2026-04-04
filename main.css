@@ -1693,14 +1693,13 @@ my-footer {
 }
 
 .grade-input {
-    width: 92px;
-    padding: 12px 10px;
+    width: 88px;
+    padding: 8px 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
     outline: none;
     text-align: center;
-    font-size: 14px;
-    min-height: 44px;
+    font-size: 13px;
 }
 
 .grade-input:focus {
@@ -4185,33 +4184,5 @@ body.login-body .login-image {
     .lesson-line {
         font-size: 11px;
         line-height: 1.35;
-    }
-}
-
-
-/* Cải thiện UX Bảng điểm Mobile */
-.grade-table td:nth-child(8) {
-    background-color: #f8f9fa;
-}
-.grade-row.is-risk td:nth-child(8) {
-    background-color: #faecc0;
-}
-
-@media (max-width: 900px) {
-    .grade-table th:nth-child(1), .grade-table td:nth-child(1) { width: 50px; min-width: 50px; left: 0; position: sticky; z-index: 10; }
-    .grade-table th:nth-child(2), .grade-table td:nth-child(2) { width: 100px; min-width: 100px; left: 50px; position: sticky; z-index: 10; }
-    .grade-table th:nth-child(3), .grade-table td:nth-child(3) { width: 160px; min-width: 160px; left: 150px; position: sticky; z-index: 10; box-shadow: 4px 0 8px rgba(0,0,0,0.06); }
-
-    .grade-table th:nth-child(1), .grade-table th:nth-child(2), .grade-table th:nth-child(3) {
-        z-index: 11;
-        background: #bd0606;
-    }
-
-    .grade-table td:nth-child(1), .grade-table td:nth-child(2), .grade-table td:nth-child(3) {
-        background-color: #fff;
-    }
-    
-    .grade-row.is-risk td:nth-child(1), .grade-row.is-risk td:nth-child(2), .grade-row.is-risk td:nth-child(3) {
-        background-color: #fff7cc;
     }
 }
